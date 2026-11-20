@@ -127,9 +127,7 @@ code{background:#f1f5f9;padding:1px 6px;border-radius:6px;font-size:12px}
    - SUPABASE_ANON_KEY : kunci "anon public" (aman ditaruh di sini; data dilindungi Row Level Security)
    Biarkan kosong untuk mode lokal (tanpa login, data hanya di browser). */
 window.MKA_CONFIG = {
-  SUPABASE_URL: "https://pzsuzkipvlairisxletk.supabase.co",
-  SUPABASE_ANON_KEY: "sb_publishable_MMC4KmnmKUOsez_0C29Wtg_G_j6g-Ll"
-};
+  SUPABASE_URL: '',
   SUPABASE_ANON_KEY: ''
 };
 </script>
@@ -153,7 +151,8 @@ const KELC = {DERMAGA:'var(--c2)',LAPANGAN:'var(--c1)',BANTU:'var(--c3)'};
 const ROLES = {pusat:'Admin Pusat (Teknik Pusat)',terminal:'Admin Terminal',onduty:'Onduty / Operasional',pimpinan:'Pimpinan'};
 const YEAR = 2026;
 const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
-const CLOUD = {url:String((window.MKA_CONFIG||{}).SUPABASE_URL||'').replace(/\/+$/,''), key:String((window.MKA_CONFIG||{}).SUPABASE_ANON_KEY||'')};
+const LOCALCFG = (() => { try { return JSON.parse(localStorage.getItem('mka_cfg')||'null') || {}; } catch(e) { return {}; } })();
+const CLOUD = {url:String((window.MKA_CONFIG||{}).SUPABASE_URL || LOCALCFG.url || '').trim().replace(/\/+$/,''), key:String((window.MKA_CONFIG||{}).SUPABASE_ANON_KEY || LOCALCFG.key || '').trim()};
 const CLOUD_ON = /^https?:\/\//.test(CLOUD.url) && CLOUD.key.length > 20;
 const LSKEY = SEED.mode==='kosong' ? 'mka_proto_kosong_v1' : 'mka_proto_v1';
 let ST = {aliasAdd:[], alatEdit:{}, tarif:null, faktor:null, ehm:{}, avail:{}, anom:{}, locks:{}, log:[], rowMap:{}, uploads:[]};
@@ -1178,7 +1177,45 @@ function render(){
   if (P[UI.page].after) P[UI.page].after();
 }
 if (CLOUD_ON) { document.getElementById('ver').textContent = 'Teknik Pusat · v1.0 online'; bootCloud(); }
-else if (SEED.mode==='cloud') { document.body.innerHTML = '<div style="max-width:560px;margin:80px auto;font-family:system-ui;background:#fff;border-radius:16px;padding:28px;box-shadow:0 10px 30px rgba(0,0,0,.08)"><h2 style="margin-top:0">Konfigurasi Supabase belum diisi</h2><p>Buka file <b>index.html</b> dengan Notepad, cari bagian <code>MKA_CONFIG</code>, lalu isi <b>SUPABASE_URL</b> dan <b>SUPABASE_ANON_KEY</b> dari Supabase → Project Settings → API. Simpan, lalu upload ulang ke hosting.</p></div>'; }
+else if (SEED.mode==='cloud') { document.body.innerHTML = `<div style="max-width:620px;margin:60px auto;font-family:Inter,'Segoe UI',system-ui;background:#fff;border-radius:18px;padding:30px 32px;box-shadow:0 10px 30px rgba(0,0,0,.08)">
+  <h2 style="margin:0 0 6px">Sambungkan ke Supabase</h2>
+  <p style="color:#64748b;margin:0 0 18px;font-size:14px">Tempel dua nilai dari Supabase → <b>Project Settings → API Keys</b> (atau <b>Data API</b>), lalu klik <b>Uji koneksi</b>.</p>
+  <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px">Project URL</label>
+  <input id="cfgUrl" placeholder="https://xxxxxxxx.supabase.co" style="width:100%;padding:10px 12px;border:1px solid #d8e0ea;border-radius:10px;font-size:14px;margin-bottom:14px">
+  <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px">anon public key / publishable key (bukan service_role / secret)</label>
+  <textarea id="cfgKey" rows="3" placeholder="eyJhbGciOi... atau sb_publishable_..." style="width:100%;padding:10px 12px;border:1px solid #d8e0ea;border-radius:10px;font-size:13px;font-family:monospace;margin-bottom:14px"></textarea>
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><button id="cfgTest">Uji koneksi</button><button id="cfgDl" class="ghost" disabled>Unduh index.html yang sudah terisi</button></div>
+  <div id="cfgMsg" style="margin-top:14px;font-size:13.5px;line-height:1.5"></div>
+  <div style="margin-top:18px;padding-top:14px;border-top:1px solid #e8edf3;color:#64748b;font-size:12.5px;line-height:1.55">
+    Setelah koneksi berhasil: <b>1)</b> klik <b>Unduh index.html yang sudah terisi</b>, <b>2)</b> di GitHub buka repo → <b>Add file → Upload files</b> → upload file itu (menimpa index.html lama) → <b>Commit</b>, <b>3)</b> tunggu 1–2 menit lalu buka ulang alamat GitHub Pages dengan <b>Ctrl+F5</b>. Setelah itu semua laptop langsung tampil halaman login.</div></div>`;
+  const msg = (h, ok) => { const m = document.getElementById('cfgMsg'); m.innerHTML = h; m.style.color = ok ? '#059669' : '#dc2626'; };
+  let good = null;
+  document.getElementById('cfgTest').onclick = async () => {
+    let url = document.getElementById('cfgUrl').value.trim().replace(/\/+$/,'').replace(/\/(rest|auth)\/v1.*$/,''); const key = document.getElementById('cfgKey').value.trim().replace(/\s+/g,'');
+    if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(url)) return msg('Project URL harus berbentuk <b>https://xxxx.supabase.co</b> (tanpa garis miring di akhir, tanpa /rest/v1).');
+    if (/service_role|sb_secret_/i.test(key) || (key.startsWith('eyJ') && /service_role/.test(atob((key.split('.')[1]||'').replace(/-/g,'+').replace(/_/g,'/'))||''))) return msg('Itu kunci <b>service_role / secret</b> — jangan dipakai di aplikasi. Ambil kunci <b>anon public</b> atau <b>publishable</b>.');
+    if (key.length < 30) return msg('Kunci terlalu pendek. Salin seluruh kunci anon/publishable.');
+    msg('Menguji koneksi…', true);
+    try {
+      const r = await fetch(url+'/auth/v1/settings', {headers:{apikey:key}});
+      if (!r.ok) return msg(`Supabase menolak kunci (HTTP ${r.status}). Pastikan kunci berasal dari proyek yang sama dengan URL.`);
+      const r2 = await fetch(url+'/rest/v1/terminal?select=kode&limit=1', {headers:{apikey:key}});
+      if (r2.status===404) return msg('Koneksi berhasil, tetapi tabel belum ada. Jalankan dulu <b>01_skema.sql</b> dan <b>02_data_master.sql</b> di SQL Editor.');
+      good = {url, key}; try { localStorage.setItem('mka_cfg', JSON.stringify(good)); } catch(e) {}
+      document.getElementById('cfgDl').disabled = false;
+      msg('✓ Koneksi berhasil. Laptop ini sudah tersambung — <a href="" onclick="location.reload();return false">buka halaman login</a>. Untuk laptop lain, unduh index.html yang sudah terisi lalu upload ke GitHub.', true);
+    } catch(e) { msg('Tidak bisa menghubungi Supabase: '+e.message+'. Periksa URL dan koneksi internet.'); }
+  };
+  document.getElementById('cfgDl').onclick = async () => {
+    if (!good) return;
+    try {
+      let src = await (await fetch(location.href.split('#')[0], {cache:'no-store'})).text();
+      src = src.replace(/SUPABASE_URL:\s*'[^']*'/, `SUPABASE_URL: '${good.url}'`).replace(/SUPABASE_ANON_KEY:\s*'[^']*'/, `SUPABASE_ANON_KEY: '${good.key}'`);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([src], {type:'text/html'})); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove();
+      msg('✓ index.html terisi sudah diunduh. Upload ke GitHub (menimpa yang lama), tunggu 1–2 menit, lalu buka ulang dengan Ctrl+F5.', true);
+    } catch(e) { msg('Browser tidak mengizinkan membaca file ini (biasanya karena dibuka langsung dari folder). Laptop ini tetap sudah tersambung; untuk file terisi, kirim URL & kunci ke admin/Claude.'); }
+  };
+}
 else { if (SEED.mode==='kosong') document.getElementById('ver').textContent = 'Teknik Pusat · prototipe v0.2 · mulai dari nol';
   if (!location.hash) location.hash = 'beranda'; render(); }
 </script>
