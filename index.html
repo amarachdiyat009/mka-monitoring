@@ -127,7 +127,7 @@ code{background:#f1f5f9;padding:1px 6px;border-radius:6px;font-size:12px}
    - SUPABASE_ANON_KEY : kunci "anon public" (aman ditaruh di sini; data dilindungi Row Level Security)
    Biarkan kosong untuk mode lokal (tanpa login, data hanya di browser). */
 window.MKA_CONFIG = {
-  SUPABASE_URL: '',
+  SUPABASE_URL: 'https://pzsuzkipvlairisxletk.supabase.co',
   SUPABASE_ANON_KEY: ''
 };
 </script>
@@ -1188,6 +1188,7 @@ else if (SEED.mode==='cloud') { document.body.innerHTML = `<div style="max-width
   <div id="cfgMsg" style="margin-top:14px;font-size:13.5px;line-height:1.5"></div>
   <div style="margin-top:18px;padding-top:14px;border-top:1px solid #e8edf3;color:#64748b;font-size:12.5px;line-height:1.55">
     Setelah koneksi berhasil: <b>1)</b> klik <b>Unduh index.html yang sudah terisi</b>, <b>2)</b> di GitHub buka repo → <b>Add file → Upload files</b> → upload file itu (menimpa index.html lama) → <b>Commit</b>, <b>3)</b> tunggu 1–2 menit lalu buka ulang alamat GitHub Pages dengan <b>Ctrl+F5</b>. Setelah itu semua laptop langsung tampil halaman login.</div></div>`;
+  if (CLOUD.url) document.getElementById('cfgUrl').value = CLOUD.url;
   const msg = (h, ok) => { const m = document.getElementById('cfgMsg'); m.innerHTML = h; m.style.color = ok ? '#059669' : '#dc2626'; };
   let good = null;
   document.getElementById('cfgTest').onclick = async () => {
