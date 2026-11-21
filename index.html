@@ -207,6 +207,15 @@ function rebuildData(){
   });
 }
 rebuildData();
+
+/* periode awal saat dibuka = bulan laporan terakhir: bulan lalu, atau bulan terakhir yang sudah ada datanya (tidak melewati bulan lalu) */
+function defaultBulan(){
+  const now = new Date(); const prev = now.getFullYear() > YEAR ? 12 : Math.max(1, now.getMonth());   // getMonth(): Jan = 0 → bulan lalu
+  const ada = new Set(); ['sp','pr','bb'].forEach(kd => (DATA[kd]||[]).forEach(r => ada.add(r.bln)));
+  Object.keys(ST.ehmBulan||{}).forEach(k => { const [,y,m] = k.split('|'); if (+y===YEAR) ada.add(+m); });
+  const cand = [...ada].filter(m => m <= prev); return cand.length ? (cand.includes(prev) ? prev : Math.max(...cand)) : prev;
+}
+UI.bln = defaultBulan();
 /* EHM jam dari lembar kerja (Sep, JKT1) + form */
 const EHM_SEED = {};
 SEED.ehm.forEach(e => { if (e.k && e.end!=null && e.hm[0]!=null) EHM_SEED[e.k] = {awal:e.hm[0], akhir:e.end, jam:e.end - e.hm[0], hm:e.hm, nama:e.n}; });
@@ -1198,7 +1207,7 @@ const cloud = {
     ST.log = lg.map(r => ({w:String(r.waktu).slice(0,16).replace('T',' '), u:r.oleh, what:r.perubahan, detail:r.detail}));
     SR.sp.length = 0; SR.pr.length = 0; SR.bb.length = 0;
     UI.role = this.profile.peran; UI.rterm = this.profile.terminal || (TERMS[0]||{}).k; UI.fterm = (UI.role==='terminal'||UI.role==='onduty') ? UI.rterm : 'ALL';
-    rebuildData();
+    rebuildData(); UI.bln = defaultBulan();
   },
 
   // ---------- tulis ----------
