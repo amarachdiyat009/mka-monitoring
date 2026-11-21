@@ -554,10 +554,11 @@ P.beranda = () => {
   // kelengkapan (bulan terakhir pada periode)
   const kb = ms.at(-1); const Kc = R.parts ? R.parts.at(-1) : R;
   h += `<div class="grid g2"><div class="card"><h3>Kelengkapan data <small>${BLN[kb-1]} ${YEAR} · batas upload 7 ${BLN[kb%12]}</small></h3><table class="matrix"><tr><th style="text-align:left">Terminal</th><th>Produksi</th><th>Sparepart</th><th>BBM</th><th>EHM</th><th>Availability</th><th>Status</th></tr>`+
-    terms.map(t => { const ehmOk = kb===9 && t==='JKT1' && Object.keys(EHM_SEED).length>0 || Object.keys(ST.ehm).some(k => ALAT[k.split('|')[0]]?.t===t && +k.split('|')[1].slice(5,7)===kb);
-      const avOk = Object.values(ALAT).some(a => a.t===t && avail(a.k,kb)!==null);
+    terms.map(t => { const act = Object.values(ALAT).filter(a => a.t===t && a.st==='aktif' && a.j!=='CHS' && a.j!=='GNS');
+      const nE = act.filter(a => jamOperasi(a.k,kb)!==null).length; const slaA = act.filter(a => a.sla); const nA = slaA.filter(a => avail(a.k,kb)!==null).length;
       const c = v => v ? pill('✓','p-ok') : pill('belum','p-bad');
-      return `<tr><td style="text-align:left">${t}</td><td>${c(Kc.T[t].prod)}</td><td>${c(Kc.T[t].hasSp)}</td><td>${c(Kc.T[t].hasBb)}</td><td>${c(ehmOk)}</td><td>${c(avOk)}</td><td>${locked(t,kb)?pill('Terkunci','p-mute'):pill('Terbuka','p-info')}</td></tr>`; }).join('')+`</table></div>`;
+      const part = (n, of) => n===0 ? pill('belum','p-bad') : n>=of ? pill('✓','p-ok') : `<span class="pill p-warn" title="${n} dari ${of} alat sudah terisi">${n}/${of} alat</span>`;
+      return `<tr><td style="text-align:left">${t}</td><td>${c(Kc.T[t].prod)}</td><td>${c(Kc.T[t].hasSp)}</td><td>${c(Kc.T[t].hasBb)}</td><td>${part(nE, act.length)}</td><td>${part(nA, slaA.length)}</td><td>${locked(t,kb)?pill('Terkunci','p-mute'):pill('Terbuka','p-info')}</td></tr>`; }).join('')+`</table></div>`;
   // per kelompok
   const kg = {DERMAGA:{b:0,r:0,n:0},LAPANGAN:{b:0,r:0,n:0},BANTU:{b:0,r:0,n:0}}; Object.values(A).forEach(x => { if (x.a.j==='GNS') return; kg[x.a.g].b += x.biaya; kg[x.a.g].r += x.rev; kg[x.a.g].n++; });
   h += `<div class="card"><h3>Biaya per kelompok alat</h3>`+hbars(Object.entries(kg).map(([k,v]) => ({label:KELN[k]+' ('+v.n+')', v:v.b, c:KELC[k]})), {fmt:rp, lw:190})+
