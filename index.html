@@ -155,8 +155,9 @@ const LOCALCFG = (() => { try { return JSON.parse(localStorage.getItem('mka_cfg'
 const CLOUD = {url:String((window.MKA_CONFIG||{}).SUPABASE_URL || LOCALCFG.url || '').trim().replace(/\/+$/,''), key:String((window.MKA_CONFIG||{}).SUPABASE_ANON_KEY || LOCALCFG.key || '').trim()};
 const CLOUD_ON = /^https?:\/\//.test(CLOUD.url) && CLOUD.key.length > 20;
 const LSKEY = SEED.mode==='kosong' ? 'mka_proto_kosong_v1' : 'mka_proto_v1';
-let ST = {aliasAdd:[], alatEdit:{}, tarif:null, faktor:null, ehm:{}, avail:{}, anom:{}, locks:{}, log:[], rowMap:{}, uploads:[]};
+let ST = {aliasAdd:[], alatEdit:{}, tarif:null, faktor:null, ehm:{}, ehmBulan:{}, avail:{}, anom:{}, locks:{}, log:[], rowMap:{}, uploads:[]};
 if (!CLOUD_ON) try { const s = localStorage.getItem(LSKEY); if (s) ST = Object.assign(ST, JSON.parse(s)); } catch(e) {}
+ST.ehmBulan = ST.ehmBulan || {};
 let UPROWS = {sp:[], pr:[], bb:[]};       // baris hasil upload; disimpan di browser bila muat
 if (!CLOUD_ON) try { const s = localStorage.getItem(LSKEY+'_rows'); if (s) UPROWS = JSON.parse(s); } catch(e) {}
 function save(){ if (CLOUD_ON) return; try { localStorage.setItem(LSKEY, JSON.stringify(ST)); } catch(e){ toast('Penyimpanan browser penuh/tidak tersedia — perubahan hanya tersimpan selama halaman terbuka.'); } }
@@ -209,13 +210,14 @@ rebuildData();
 /* EHM jam dari lembar kerja (Sep, JKT1) + form */
 const EHM_SEED = {};
 SEED.ehm.forEach(e => { if (e.k && e.end!=null && e.hm[0]!=null) EHM_SEED[e.k] = {awal:e.hm[0], akhir:e.end, jam:e.end - e.hm[0], hm:e.hm, nama:e.n}; });
+function ehmBulan(k, bln){ return ST.ehmBulan[`${k}|${YEAR}|${bln}`] || null; }
+function jamHarian(k, bln){ let j = 0, n = 0; Object.entries(ST.ehm).forEach(([key,v]) => { const [kk,d] = key.split('|'); if (kk===k && d.startsWith(String(YEAR)) && +d.slice(5,7)===bln) { j += (+v.jam||0); n++; } }); return n ? {jam:j, hari:n} : null; }
 function jamOperasi(k, bln){
-  let j = 0, has = false;
-  if (bln===9 && EHM_SEED[k]) { j += EHM_SEED[k].jam; has = true; }
-  Object.entries(ST.ehm).forEach(([key,v]) => { const [kk,d] = key.split('|'); if (kk===k && d.startsWith(String(YEAR)) && +d.slice(5,7)===bln && !(bln===9 && EHM_SEED[k])) { j += (v.jam||0); has = true; } });
-  return has ? j : null;
+  const m = ehmBulan(k, bln); if (m && m.jam!=null) return +m.jam;          // total bulanan = angka resmi laporan
+  if (bln===9 && EHM_SEED[k]) return EHM_SEED[k].jam;
+  const h = jamHarian(k, bln); return h ? h.jam : null;                      // kalau belum ada total, pakai jumlah harian
 }
-function jamBD(k, bln){ let j=0, has=false; Object.entries(ST.ehm).forEach(([key,v]) => { const [kk,d]=key.split('|'); if (kk===k && d.startsWith(String(YEAR)) && +d.slice(5,7)===bln){ j+=(+v.bd||0); has=true; } }); return has?j:null; }
+function jamBD(k, bln){ const m = ehmBulan(k, bln); if (m && m.bd!=null && m.bd!=='') return +m.bd; let j=0, has=false; Object.entries(ST.ehm).forEach(([key,v]) => { const [kk,d]=key.split('|'); if (kk===k && d.startsWith(String(YEAR)) && +d.slice(5,7)===bln){ j+=(+v.bd||0); has=true; } }); return has?j:null; }
 function avail(k, bln){ const o = ST.avail[k+'|'+bln]; if (o!==undefined) return o; const s = SEED.sla[k]; return s && bln<=9 ? s.av[bln-1] : null; }
 function lumpsum(k, bln){ const a = ALAT[k]; if (!a || !a.h) return 0; const f = faktor(avail(k,bln)); return f===null ? 0 : a.h * f; }
 function tarif(t, keg, uk, fm){ const x = TARIF().find(r => r.t===t && r.keg===keg && r.uk===uk && r.fm===fm && r.pl==='DOMESTIK'); return x ? +x.v : null; }
@@ -453,7 +455,7 @@ const PAGES = [
   {k:'produksi', n:'Produksi', ic:'▤', sec:'Input & Evaluasi'},
   {k:'sparepart', n:'Sparepart', ic:'⚙'},
   {k:'bbm', n:'BBM', ic:'⛽'},
-  {k:'ehm', n:'EHM Harian', ic:'⏱'},
+  {k:'ehm', n:'EHM / Jam Operasi', ic:'⏱'},
   {k:'sla', n:'Lumpsum / SLA', ic:'₰'},
   {k:'analisa', n:'Analisa & Anomali', ic:'⚠', sec:'Analisa'},
   {k:'antrian', n:'Antrian Pemetaan', ic:'⇄'},
@@ -895,7 +897,7 @@ P.bbm.after = () => { ['bb_alat','bb_raw','bb_eval'].forEach(drawTable); wireUpl
 
 /* ---------- EHM ---------- */
 P.ehm = () => {
-  let h = tabs([['form','Isi harian'],['bulan','Isi sebulan (tempel dari Excel)'],['rekap','Rekap bulanan']]);
+  let h = tabs([['bulan','Isi total sebulan'],['form','Isi harian (opsional)'],['rekap','Rekap bulanan']]);
   const t = UI.role==='terminal'||UI.role==='onduty' ? UI.rterm : (UI.fterm==='ALL'?'JKT1':UI.fterm);
   const list = Object.values(ALAT).filter(a => a.t===t && a.st==='aktif' && a.j!=='CHS').sort((a,b) => ({DERMAGA:0,LAPANGAN:1,BANTU:2}[a.g]-{DERMAGA:0,LAPANGAN:1,BANTU:2}[b.g]) || a.k.localeCompare(b.k));
   const STS = ['Operasi','Standby','Breakdown','PM'];
@@ -912,19 +914,26 @@ P.ehm = () => {
         <td><input type="text" data-f="ket" value="${esc(v.ket||'')}" style="width:220px" ${ed}></td><td data-o="msg"></td></tr>`; }).join('')+
     `</table></div><div class="row" style="margin-top:10px"><button id="ehmSave" ${ed}>Simpan EHM ${d}</button></div></div>`;
   } else if (curTab()==='bulan') {
-    const n = new Date(YEAR, UI.bln, 0).getDate(); const days = Array.from({length:n}, (_,i) => i+1); const ed = canEditEhm(t, `${YEAR}-${String(UI.bln).padStart(2,'0')}-01`) ? '' : 'disabled';
-    const key = (k,dd) => `${k}|${YEAR}-${String(UI.bln).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
-    h += `<div class="note"><b>${t} · ${periodeTxt()}</b> (ganti bulan di pilihan Periode kanan atas). Baris = alat, kolom = tanggal, isi = <b>jam operasi</b>.<br>
-      <b>Tempel dari Excel:</b> di lembar manual, blok angka jam operasi satu alat (atau beberapa alat sekaligus, urutan baris sama dengan tabel ini), tekan Ctrl+C, klik kotak tanggal 1 alat itu di sini, lalu Ctrl+V. Kotak kosong = belum diisi. Angka di atas 24 ditandai merah.</div>
-    <div class="tw" style="max-height:640px"><table id="ehmGrid" style="font-size:12px"><tr><th style="position:sticky;left:0;z-index:2">Kode alat</th>${days.map(dd => `<th class="n" style="padding:6px 4px">${dd}</th>`).join('')}<th class="n">Total</th></tr>`+
-      list.map((a,ri) => `<tr data-gk="${a.k}"><td style="position:sticky;left:0;background:#fff;z-index:1;white-space:nowrap"><b>${a.k}</b></td>${days.map((dd,ci) => { const v = ST.ehm[key(a.k,dd)]; return `<td style="padding:2px"><input data-r="${ri}" data-c="${ci}" data-day="${dd}" value="${v&&v.jam!=null?v.jam:''}" ${ed} style="width:42px;padding:4px 3px;text-align:right;font-size:12px;border-radius:6px"></td>`; }).join('')}<td class="n" data-tot><b></b></td></tr>`).join('')+
-    `</table></div><div class="row" style="margin-top:10px"><button id="ehmGridSave" ${ed}>Simpan ${periodeTxt()}</button><span class="muted" id="gridInfo"></span></div>`;
+    const nd = new Date(YEAR, UI.bln, 0).getDate(); const ed = canEditEhm(t, `${YEAR}-${String(UI.bln).padStart(2,'0')}-01`) ? '' : 'disabled';
+    h += `<div class="card"><h3>Isi total EHM sebulan · ${t} · ${periodeTxt()} <small>ganti bulan di pilihan Periode kanan atas</small></h3>
+    <div class="note">Cara cepat untuk laporan: isi <b>total jam operasi sebulan</b> per alat (maksimal ${nd*24} jam = ${nd} hari × 24). Jam breakdown dan keterangan boleh diisi bila ada.<br>
+      <b>Tempel dari Excel:</b> blok kolom total jam beberapa alat (urutan sama dengan tabel ini), Ctrl+C, klik kotak alat pertama, Ctrl+V.<br>
+      Angka total bulanan ini yang dipakai di laporan. Isian harian hanya untuk monitoring dan ditampilkan sebagai pembanding.</div>
+    <div class="tw" style="max-height:640px"><table id="ehmMonth"><tr><th>Kode alat</th><th>Kelompok</th><th>Total jam operasi</th><th>Jam breakdown</th><th>Keterangan</th><th class="n">Dari isian harian</th><th></th></tr>`+
+    list.map((a,ri) => { const m = ehmBulan(a.k, UI.bln) || {}; const hr = jamHarian(a.k, UI.bln);
+      return `<tr data-mk="${a.k}"><td><b>${a.k}</b></td><td>${KELN[a.g]}</td>
+        <td><input type="text" inputmode="decimal" data-f="jam" data-r="${ri}" value="${m.jam??''}" style="width:110px;text-align:right" ${ed}></td>
+        <td><input type="text" inputmode="decimal" data-f="bd" data-r="${ri}" value="${m.bd??''}" style="width:100px;text-align:right" ${ed}></td>
+        <td><input type="text" data-f="ket" value="${esc(m.ket||'')}" style="width:220px" ${ed}></td>
+        <td class="n muted">${hr ? dec(hr.jam,1)+' jam · '+hr.hari+' hari' : '–'}</td><td data-o="msg"></td></tr>`; }).join('')+
+    `</table></div><div class="row" style="margin-top:10px"><button id="ehmMonthSave" ${ed}>Simpan total ${periodeTxt()}</button></div></div>`;
   } else {
     const rows = list.map(a => { const jam = jamOperasi(a.k, UI.bln); const bd = jamBD(a.k, UI.bln); const days = new Date(YEAR, UI.bln, 0).getDate()*24;
-      const hari = Object.keys(ST.ehm).filter(key => { const [kk,dd] = key.split('|'); return kk===a.k && dd.startsWith(String(YEAR)) && +dd.slice(5,7)===UI.bln; }).length;
-      return {k:a.k, g:KELN[a.g], hari, jam, bd, av: bd!==null ? (days-bd)/days : null, avl: avail(a.k, UI.bln), util: jam!==null ? jam/(days-(bd||0)) : null}; });
-    h += `<div class="note">${t} · ${periodeTxt()}. Jam operasi = jumlah jam harian. Utilisasi = jam operasi ÷ (jam kalender − jam breakdown). Availability hitung = (jam kalender − jam breakdown) ÷ jam kalender.</div>`;
-    h += `<div class="card"><h3>Rekap EHM bulanan</h3>`+table('ehm_rekap',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'hari',h:'Hari terisi',n:1,f:num},{k:'jam',h:'Jam operasi',n:1,f:v=>dec(v,1)},{k:'util',h:'Utilisasi',n:1,f:pct},{k:'bd',h:'Jam breakdown',n:1,f:num},{k:'av',h:'Availability hitung',n:1,f:pct},{k:'avl',h:'Availability laporan SLA',n:1,f:pct}],rows,{sort:'jam'})+`</div>`;
+      const hr = jamHarian(a.k, UI.bln); const m = ehmBulan(a.k, UI.bln); const hari = hr ? hr.hari : 0;
+      const sumber = m && m.jam!=null ? 'Total bulanan' : hr ? 'Jumlah harian' : (UI.bln===9 && EHM_SEED[a.k] ? 'Lembar EHM' : '–');
+      return {k:a.k, g:KELN[a.g], sumber, hari, harian: hr ? hr.jam : null, jam, bd, av: bd!==null ? (days-bd)/days : null, avl: avail(a.k, UI.bln), util: jam!==null ? jam/(days-(bd||0)) : null}; });
+    h += `<div class="note">${t} · ${periodeTxt()}. Jam operasi laporan = total bulanan bila diisi; kalau belum, dipakai jumlah isian harian. Utilisasi = jam operasi ÷ (jam kalender − jam breakdown). Availability hitung = (jam kalender − jam breakdown) ÷ jam kalender.</div>`;
+    h += `<div class="card"><h3>Rekap EHM bulanan</h3>`+table('ehm_rekap',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'jam',h:'Jam operasi (laporan)',n:1,f:v=>dec(v,1)},{k:'sumber',h:'Sumber'},{k:'harian',h:'Jumlah harian (monitoring)',n:1,f:v=>dec(v,1)},{k:'hari',h:'Hari terisi',n:1,f:num},{k:'util',h:'Utilisasi',n:1,f:pct},{k:'bd',h:'Jam breakdown',n:1,f:num},{k:'av',h:'Availability hitung',n:1,f:pct},{k:'avl',h:'Availability laporan SLA',n:1,f:pct}],rows,{sort:'jam'})+`</div>`;
   }
   return h;
 };
@@ -956,6 +965,28 @@ P.ehm.after = () => {
       const keys = put.map(([k,v]) => { ST.ehm[k] = v; return k; });
       if (CLOUD_ON) cloud.ehmKeys(keys);
       logc('Input EHM', `${dI.value} · ${keys.length} alat`); save(); toast(`EHM ${dI.value} tersimpan untuk ${keys.length} alat.`); render(); };
+  }
+  const mt = document.getElementById('ehmMonth');
+  if (mt) {
+    const nd = new Date(YEAR, UI.bln, 0).getDate(), maxJ = nd*24;
+    const chk = tr => { const j = val(tr,'jam'), bd = val(tr,'bd'); const o = tr.querySelector('[data-o=msg]'); o.innerHTML = '';
+      if (j!=='' && (isNaN(+j) || +j<0 || +j>maxJ)) { o.innerHTML = pill(`Jam 0–${maxJ}`,'p-bad'); return false; }
+      if (bd!=='' && (isNaN(+bd) || +bd<0 || (j!==''?+j:0) + +bd > maxJ)) { o.innerHTML = pill(`Jam operasi + breakdown > ${maxJ}`,'p-bad'); return false; }
+      return true; };
+    mt.querySelectorAll('tr[data-mk]').forEach(tr => { tr.addEventListener('input', () => chk(tr)); chk(tr); });
+    mt.addEventListener('paste', e => { const inp = e.target.closest('input[data-r]'); if (!inp) return; const txt = (e.clipboardData||window.clipboardData).getData('text'); if (!/[\t\n]/.test(txt.trim())) return; e.preventDefault();
+      let lines = txt.replace(/\r/g,'').split('\n'); if (lines.at(-1)==='') lines.pop(); const r0 = +inp.dataset.r, f = inp.dataset.f;
+      lines.forEach((l,i) => { const cells = l.split('\t'); const tr = mt.querySelector(`tr[data-mk]:nth-of-type(${r0+i+2})`); if (!tr) return;
+        const a = tr.querySelector(`[data-f=${f}]`); if (a) a.value = cells[0].trim(); if (f==='jam' && cells.length>1) { const b = tr.querySelector('[data-f=bd]'); if (b) b.value = cells[1].trim(); } chk(tr); }); });
+    document.getElementById('ehmMonthSave').onclick = () => {
+      let bad = 0; const put = [];
+      mt.querySelectorAll('tr[data-mk]').forEach(tr => { if (!chk(tr)) { bad++; return; } const j = val(tr,'jam'), bd = val(tr,'bd'), ket = tr.querySelector('[data-f=ket]').value; const key = `${tr.dataset.mk}|${YEAR}|${UI.bln}`;
+        if (j==='' && bd==='' && !ket) { if (ST.ehmBulan[key]) put.push([key, null]); return; }
+        put.push([key, {jam: j===''?null:+j, bd: bd===''?null:+bd, ket}]); });
+      if (bad) { toast(bad+' baris belum valid — perbaiki dulu (lihat tanda merah).'); return; }
+      put.forEach(([k,v]) => { if (v) ST.ehmBulan[k] = v; else delete ST.ehmBulan[k]; });
+      if (CLOUD_ON) cloud.ehmBulan(put);
+      logc('Input EHM total bulanan', `${periodeTxt()} · ${put.filter(x=>x[1]).length} alat`); save(); toast(`Total EHM ${periodeTxt()} tersimpan untuk ${put.filter(x=>x[1]).length} alat.`); render(); };
   }
   const grid = document.getElementById('ehmGrid');
   if (grid) {
@@ -1139,10 +1170,10 @@ const cloud = {
     const pr = await this.req(`profiles?user_id=eq.${uid}&select=*`);
     if (!pr.length) throw new Error('Akun ini belum diberi peran. Minta Admin Pusat menambahkan email Anda di tabel akun_awal.');
     this.profile = pr[0];
-    const [terms, alat, alias, tarif, fak, batch, sp, prd, bb, ehm, av, an, lk, lg] = await Promise.all([
+    const [terms, alat, alias, tarif, fak, batch, sp, prd, bb, ehm, av, ehmb, an, lk, lg] = await Promise.all([
       this.all('terminal','aktif=eq.true&order=urut'), this.all('alat','select=*'), this.all('alias','select=*'), this.all('tarif','select=*&order=id'), this.all('faktor_sla','select=*&order=batas'),
       this.all('upload_batch',`tahun=eq.${YEAR}&order=created_at`), this.all('sparepart',`tahun=eq.${YEAR}`), this.all('produksi',`tahun=eq.${YEAR}`), this.all('bbm',`tahun=eq.${YEAR}`),
-      this.all('ehm',`tanggal=gte.${YEAR-1}-12-01`), this.all('availability',`tahun=eq.${YEAR}`), this.all('anomali_status','select=*'), this.all('kunci_periode',`tahun=eq.${YEAR}`), this.all('log_perubahan','order=waktu.desc&limit=300')]);
+      this.all('ehm',`tanggal=gte.${YEAR-1}-12-01`), this.all('availability',`tahun=eq.${YEAR}`), this.all('ehm_bulanan',`tahun=eq.${YEAR}`).catch(() => []), this.all('anomali_status','select=*'), this.all('kunci_periode',`tahun=eq.${YEAR}`), this.all('log_perubahan','order=waktu.desc&limit=300')]);
     TERMS.splice(0, TERMS.length, ...terms.map(t => ({k:t.kode, n:t.nama, pref:t.prefiks_sigap||'', sla:t.nama_sla||'', sig:t.nama_sigap||t.nama, pf:t.lokasi_pfuel||''})));
     Object.keys(TN).forEach(k => delete TN[k]); TERMS.forEach(t => TN[t.k] = t.n);
     Object.keys(ALAT).forEach(k => delete ALAT[k]);
@@ -1159,6 +1190,7 @@ const cloud = {
     UPROWS.pr = prd.map(r => { if (r.kode_manual) ST.rowMap[r.id] = r.kode_manual; return {id:r.id, src:'TONUS', t:r.terminal, bln:r.bulan, nama:r.nama_asli||'', type:r.eq_type, task:r.task, s20:+r.s20||0, s40:+r.s40||0, s40h:+r.s40h||0, s45:+r.s45||0, box:+r.box||0, fm:r.fm, op:r.operator, b:r.batch_id}; });
     UPROWS.bb = bb.map(r => { if (r.kode_manual) ST.rowMap[r.id] = r.kode_manual; return {id:r.id, src:'P-FUEL', t:r.terminal, bln:r.bulan, ba:r.nomor_ba||'', tgl:r.tanggal||'', nama:r.nama_asli||'', jenis:r.jenis_bbm, vol:+r.volume||0, harga:+r.tarif||0, status:r.status, b:r.batch_id}; });
     ST.ehm = {}; ehm.forEach(r => ST.ehm[r.kode_alat+'|'+r.tanggal] = {awal:r.hm_awal==null?null:+r.hm_awal, akhir:r.hm_akhir===null?null:+r.hm_akhir, jl:+r.jam_meter_lama||0, jam:+r.jam||0, bd:+r.jam_bd||0, status:r.status, ket:r.keterangan||''});
+    ST.ehmBulan = {}; ehmb.forEach(r => ST.ehmBulan[`${r.kode_alat}|${r.tahun}|${r.bulan}`] = {jam:r.jam==null?null:+r.jam, bd:r.jam_bd==null?null:+r.jam_bd, ket:r.keterangan||''});
     ST.avail = {}; av.forEach(r => ST.avail[r.kode_alat+'|'+r.bulan] = r.nilai===null?null:+r.nilai);
     ST.anom = {}; an.forEach(r => ST.anom[r.id] = r.status);
     ST.locks = {}; lk.forEach(r => ST.locks[r.terminal+'|'+r.bulan] = true);
@@ -1186,6 +1218,9 @@ const cloud = {
   rowMap(id, k){ const src = ['sp','pr','bb'].find(kd => DATA[kd].some(r => r.id===id)); const tbl = {sp:'sparepart', pr:'produksi', bb:'bbm'}[src]; if (tbl) this.bg(this.patch(tbl, `id=eq.${this.q(id)}`, {kode_manual:k}), 'pemetaan baris'); },
   ehmKeys(keys){ const rows = keys.map(key => { const v = ST.ehm[key]; const [k,d] = key.split('|'); return {kode_alat:k, tanggal:d, terminal:ALAT[k]?.t, hm_awal:v.awal??null, hm_akhir:v.akhir??null, jam_meter_lama:v.jl||0, jam:v.jam, jam_bd:v.bd, status:v.status, keterangan:v.ket||null, petugas:this.profile?.email||''}; });
     if (rows.length) this.bg(this.insert('ehm', rows, 'kode_alat,tanggal'), 'EHM'); },
+  ehmBulan(put){ const ups = put.filter(([,v]) => v).map(([key,v]) => { const [k,y,m] = key.split('|'); return {kode_alat:k, tahun:+y, bulan:+m, terminal:ALAT[k]?.t, jam:v.jam, jam_bd:v.bd, keterangan:v.ket||null, petugas:this.profile?.email||''}; });
+    const dels = put.filter(([,v]) => !v).map(([key]) => key.split('|'));
+    this.bg((async () => { if (ups.length) await this.insert('ehm_bulanan', ups, 'kode_alat,tahun,bulan'); for (const [k,y,m] of dels) await this.del('ehm_bulanan', `kode_alat=eq.${this.q(k)}&tahun=eq.${y}&bulan=eq.${m}`); })(), 'EHM bulanan'); },
   avail(k, bln, v){ this.bg(this.insert('availability', [{kode_alat:k, tahun:YEAR, bulan:bln, terminal:ALAT[k]?.t, nilai:v}], 'kode_alat,tahun,bulan'), 'availability'); },
   anom(id, t, st){ this.bg(this.insert('anomali_status', [{id, terminal:t||null, status:st, oleh:this.profile?.email||''}], 'id'), 'status anomali'); },
   alat(k, f){ this.bg(this.patch('alat', `kode=eq.${this.q(k)}`, f), 'alat'); },
