@@ -659,8 +659,8 @@ function alatDetail(R, term, ms){
   });
   const kg = {}; rows.forEach(r => { const o = kg[r.gk] = kg[r.gk]||{n:0,rev:0,biaya:0}; o.n++; o.rev += r.rev; o.biaya += r.biaya; });
   const sum = f => rs => rs.reduce((s,r)=>s+(r[f]||0),0);
-  let h = `<div style="margin-top:14px;border-top:2px solid var(--teal);padding-top:12px"><h3 style="margin:0 0 8px">Detail per alat · ${esc(term)} · ${esc(TN[term])} <small>${berPeriodTxt(ms)}</small></h3>`;
-  h += `<div class="grid k4" style="margin-bottom:10px">`+['DERMAGA','LAPANGAN','BANTU'].filter(g => kg[g]).map(g => kpi(KELN[g]+' ('+kg[g].n+' alat)', rp(kg[g].biaya), kg[g].rev ? 'Pendapatan '+rp(kg[g].rev)+' · selisih '+rp(kg[g].rev-kg[g].biaya) : 'tanpa pendapatan langsung')).join('')+`</div>`;
+  let h = `<div style="margin-top:14px;border-top:2px solid var(--teal);padding-top:12px"><h3 style="margin:0 0 8px">Biaya Detail per alat · ${esc(term)} · ${esc(TN[term])} <small>${berPeriodTxt(ms)}</small></h3>`;
+  h += `<div class="grid k4" style="margin-bottom:10px">`+['DERMAGA','LAPANGAN','BANTU'].filter(g => kg[g]).map(g => kpi('Biaya '+KELN[g]+' ('+kg[g].n+')', rp(kg[g].biaya), kg[g].rev ? 'Pendapatan '+rp(kg[g].rev)+' · selisih '+rp(kg[g].rev-kg[g].biaya) : 'tanpa pendapatan langsung')).join('')+`</div>`;
   h += table('ber_alat',[
     {k:'k',h:'Kode alat',f:v=>'<b>'+esc(v)+'</b>'},{k:'g',h:'Kelompok',x:r=>r.g},{k:'prod',h:'Produksi',n:1,f:(v,r)=>v?num(v)+' <span class="muted" style="font-size:11px">'+r.sat+'</span>':'–',x:r=>r.prod},
     {k:'rev',h:'Pendapatan',n:1,f:v=>v?rp(v):'–',x:r=>r.rev},{k:'sp',h:'Sparepart',n:1,f:rp,x:r=>r.sp},{k:'bb',h:'BBM',n:1,f:rp,x:r=>r.bb},{k:'lump',h:'Lumpsum SLA',n:1,f:rp,x:r=>r.lump},
