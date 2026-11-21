@@ -212,10 +212,10 @@ SEED.ehm.forEach(e => { if (e.k && e.end!=null && e.hm[0]!=null) EHM_SEED[e.k] =
 function jamOperasi(k, bln){
   let j = 0, has = false;
   if (bln===9 && EHM_SEED[k]) { j += EHM_SEED[k].jam; has = true; }
-  Object.entries(ST.ehm).forEach(([key,v]) => { const [kk,d] = key.split('|'); if (kk===k && +d.slice(5,7)===bln && !(bln===9 && EHM_SEED[k])) { j += (v.jam||0); has = true; } });
+  Object.entries(ST.ehm).forEach(([key,v]) => { const [kk,d] = key.split('|'); if (kk===k && d.startsWith(String(YEAR)) && +d.slice(5,7)===bln && !(bln===9 && EHM_SEED[k])) { j += (v.jam||0); has = true; } });
   return has ? j : null;
 }
-function jamBD(k, bln){ let j=0, has=false; Object.entries(ST.ehm).forEach(([key,v]) => { const [kk,d]=key.split('|'); if (kk===k && +d.slice(5,7)===bln){ j+=(+v.bd||0); has=true; } }); return has?j:null; }
+function jamBD(k, bln){ let j=0, has=false; Object.entries(ST.ehm).forEach(([key,v]) => { const [kk,d]=key.split('|'); if (kk===k && d.startsWith(String(YEAR)) && +d.slice(5,7)===bln){ j+=(+v.bd||0); has=true; } }); return has?j:null; }
 function avail(k, bln){ const o = ST.avail[k+'|'+bln]; if (o!==undefined) return o; const s = SEED.sla[k]; return s && bln<=9 ? s.av[bln-1] : null; }
 function lumpsum(k, bln){ const a = ALAT[k]; if (!a || !a.h) return 0; const f = faktor(avail(k,bln)); return f===null ? 0 : a.h * f; }
 function tarif(t, keg, uk, fm){ const x = TARIF().find(r => r.t===t && r.keg===keg && r.uk===uk && r.fm===fm && r.pl==='DOMESTIK'); return x ? +x.v : null; }
@@ -899,18 +899,30 @@ P.ehm = () => {
   const t = UI.role==='terminal'||UI.role==='onduty' ? UI.rterm : (UI.fterm==='ALL'?'JKT1':UI.fterm);
   const list = Object.values(ALAT).filter(a => a.t===t && a.st==='aktif' && a.j!=='CHS').sort((a,b) => ({DERMAGA:0,LAPANGAN:1,BANTU:2}[a.g]-{DERMAGA:0,LAPANGAN:1,BANTU:2}[b.g]) || a.k.localeCompare(b.k));
   if (curTab()==='form') {
-    const d = UI.ehmDate || `${YEAR}-10-01`;
-    h += `<div class="card"><h3>Form EHM harian · ${t} <small>diisi teman onduty dari HP atau komputer</small></h3><div class="row"><label class="ctl">Tanggal<input type="date" id="ehmD" value="${d}"></label><span class="muted">Petugas: ${esc(ROLES[UI.role])}</span></div>
-    <div class="note">Cukup isi <b>HM akhir</b>. HM awal otomatis dari HM akhir hari sebelumnya. Validasi: HM akhir tidak boleh lebih kecil dari HM awal (kecuali dipilih "Ganti HM"), jam operasi maksimal 24, jam breakdown maksimal 24. Alat nonaktif (HDT lama) tidak ditampilkan.</div>
-    <div class="tw ehm"><table><tr><th>Kode alat</th><th>Kelompok</th><th class="n">HM awal</th><th>HM akhir</th><th class="n">Jam operasi</th><th>Jam breakdown</th><th>Status</th><th>Keterangan</th><th></th></tr>`+
-    list.map(a => { const prev = prevHM(a.k, d); const v = ST.ehm[a.k+'|'+d] || {};
-      return `<tr data-ek="${a.k}"><td><b>${a.k}</b></td><td>${KELN[a.g]}</td><td class="n">${prev===null?'<span class="muted">–</span>':num(prev)}</td><td><input type="number" step="1" data-f="akhir" value="${v.akhir??''}" ${canEditEhm(t)?'':'disabled'}></td><td class="n" data-o="jam">${v.jam!=null?num(v.jam):''}</td><td><input type="number" step="0.5" min="0" max="24" data-f="bd" value="${v.bd??''}" style="width:70px" ${canEditEhm(t)?'':'disabled'}></td><td><select data-f="status" ${canEditEhm(t)?'':'disabled'}>${['Operasi','Standby','Breakdown','PM','Ganti HM'].map(s => `<option ${v.status===s?'selected':''}>${s}</option>`).join('')}</select></td><td><input type="text" data-f="ket" value="${esc(v.ket||'')}" style="width:180px" ${canEditEhm(t)?'':'disabled'}></td><td data-o="msg"></td></tr>`; }).join('')+
+    const d = UI.ehmDate || new Date().toISOString().slice(0,10);
+    h += `<div class="card"><h3>Form EHM harian · ${t} <small>diisi teman onduty dari HP atau komputer</small></h3><div class="row"><label class="ctl">Tanggal<input type="date" id="ehmD" value="${d}"></label><span class="muted">Petugas: ${esc(CLOUD_ON?(cloud.profile?.email||''):ROLES[UI.role])}</span></div>
+    <div class="note"><b>Cara isi:</b> isi <b>HM akhir</b> (angka hour meter saat tutup hari). <b>HM awal</b> terisi otomatis dari HM akhir hari sebelumnya; jam operasi = HM akhir − HM awal.<br>
+      <b>Pertama kali memakai aplikasi</b> (HM awal masih kosong): ketik HM awal dari hour meter / HM akhir kemarin di lembar lama — cukup sekali per alat.<br>
+      <b>Ganti engine / hour meter</b>: pilih status <b>Ganti HM / engine</b>, ketik HM awal meter baru, dan bila hari itu alat sempat jalan dengan meter lama isi juga <b>jam di meter lama</b>. Jam operasi = jam meter lama + (HM akhir − HM awal meter baru).</div>
+    <div class="tw ehm"><table><tr><th>Kode alat</th><th>Kelompok</th><th>HM awal</th><th>HM akhir</th><th class="n">Jam operasi</th><th>Jam breakdown</th><th>Status</th><th>Keterangan</th><th></th></tr>`+
+    list.map(a => { const prev = prevHM(a.k, d); const v = ST.ehm[a.k+'|'+d] || {}; const ed = canEditEhm(t) ? '' : 'disabled';
+      const awal = v.awal ?? prev ?? ''; const st = v.status || 'Operasi';
+      return `<tr data-ek="${a.k}" data-prev="${prev===null?'':prev}"><td><b>${a.k}</b></td><td>${KELN[a.g]}</td>
+        <td><input type="number" step="1" data-f="awal" value="${awal}" ${ed} style="width:100px;${prev!==null&&v.awal==null?'background:#f8fafc':''}" title="${prev===null?'Belum ada data sebelumnya — ketik HM awal':'Otomatis dari HM akhir '+num(prev)}">
+          <div data-o="jl" style="display:${st==='Ganti HM'?'block':'none'};margin-top:4px;font-size:11px" class="muted">jam di meter lama <input type="number" step="0.5" min="0" data-f="jl" value="${v.jl??''}" ${ed} style="width:60px;padding:3px 6px"></div></td>
+        <td><input type="number" step="1" data-f="akhir" value="${v.akhir??''}" ${ed}></td><td class="n" data-o="jam">${v.jam!=null?num(v.jam):''}</td>
+        <td><input type="number" step="0.5" min="0" max="24" data-f="bd" value="${v.bd??''}" style="width:70px" ${ed}></td>
+        <td><select data-f="status" ${ed}>${[['Operasi','Operasi'],['Standby','Standby'],['Breakdown','Breakdown'],['PM','PM'],['Ganti HM','Ganti HM / engine']].map(([s,l]) => `<option value="${s}" ${st===s?'selected':''}>${l}</option>`).join('')}</select></td>
+        <td><input type="text" data-f="ket" value="${esc(v.ket||'')}" style="width:180px" ${ed}></td><td data-o="msg"></td></tr>`; }).join('')+
     `</table></div><div class="row" style="margin-top:10px"><button id="ehmSave" ${canEditEhm(t)?'':'disabled'}>Simpan EHM ${d}</button><span class="muted" id="ehmInfo"></span></div></div>`;
   } else {
     const rows = list.map(a => { const s = EHM_SEED[a.k]; const jam = jamOperasi(a.k, UI.bln); const bd = jamBD(a.k, UI.bln); const days = new Date(YEAR, UI.bln, 0).getDate()*24;
-      return {k:a.k, g:KELN[a.g], awal:UI.bln===9&&s?s.awal:null, akhir:UI.bln===9&&s?s.akhir:null, jam, bd, av: bd!==null ? (days-bd)/days : null, avl: avail(a.k, UI.bln), util: jam!==null ? jam/(days-(bd||0)) : null}; });
-    h += `<div class="note">${t} · ${periodeTxt()}. Untuk September, jam operasi diambil dari lembar kerja EHM manual yang di-upload. Availability hitung = (jam kalender − jam breakdown) ÷ jam kalender, hanya tersedia bila jam breakdown diisi di form.</div>`;
-    h += `<div class="card"><h3>Rekap EHM bulanan</h3>`+table('ehm_rekap',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'awal',h:'HM awal',n:1,f:num},{k:'akhir',h:'HM akhir',n:1,f:num},{k:'jam',h:'Jam operasi',n:1,f:num},{k:'util',h:'Utilisasi',n:1,f:pct},{k:'bd',h:'Jam breakdown',n:1,f:num},{k:'av',h:'Availability hitung',n:1,f:pct},{k:'avl',h:'Availability laporan SLA',n:1,f:pct}],rows,{sort:'jam'})+`</div>`;
+      const ent = Object.entries(ST.ehm).filter(([key]) => { const [kk,dd] = key.split('|'); return kk===a.k && +dd.slice(5,7)===UI.bln && dd.startsWith(String(YEAR)); }).sort((x,y) => x[0].localeCompare(y[0]));
+      const ganti = ent.filter(([,v]) => v.status==='Ganti HM').length;
+      const awalE = ent.length ? (ent[0][1].awal ?? null) : null, akhirE = ent.length ? ent.at(-1)[1].akhir : null;
+      return {k:a.k, g:KELN[a.g], awal: ent.length ? awalE : (UI.bln===9&&s?s.awal:null), akhir: ent.length ? akhirE : (UI.bln===9&&s?s.akhir:null), hari: ent.length, ganti, jam, bd, av: bd!==null ? (days-bd)/days : null, avl: avail(a.k, UI.bln), util: jam!==null ? jam/(days-(bd||0)) : null}; });
+    h += `<div class="note">${t} · ${periodeTxt()}. Jam operasi dijumlahkan dari jam harian (bukan HM akhir − HM awal bulan), sehingga tetap benar bila ada ganti engine/hour meter di tengah bulan. Availability hitung = (jam kalender − jam breakdown) ÷ jam kalender, hanya tersedia bila jam breakdown diisi di form.</div>`;
+    h += `<div class="card"><h3>Rekap EHM bulanan</h3>`+table('ehm_rekap',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'awal',h:'HM awal bulan',n:1,f:num},{k:'akhir',h:'HM akhir bulan',n:1,f:num},{k:'hari',h:'Hari terisi',n:1,f:num},{k:'ganti',h:'Ganti HM',n:1,f:v=>v?pill(v+'×','p-warn'):'–'},{k:'jam',h:'Jam operasi (Σ harian)',n:1,f:num},{k:'util',h:'Utilisasi',n:1,f:pct},{k:'bd',h:'Jam breakdown',n:1,f:num},{k:'av',h:'Availability hitung',n:1,f:pct},{k:'avl',h:'Availability laporan SLA',n:1,f:pct}],rows,{sort:'jam'})+`</div>`;
   }
   return h;
 };
@@ -925,22 +937,28 @@ P.ehm.after = () => {
   drawTable('ehm_rekap');
   const dI = document.getElementById('ehmD'); if (!dI) return;
   dI.onchange = () => { UI.ehmDate = dI.value; render(); };
-  const recalc = tr => { const k = tr.dataset.ek; const prev = prevHM(k, dI.value); const ak = tr.querySelector('[data-f=akhir]').value; const st = tr.querySelector('[data-f=status]').value; const bd = tr.querySelector('[data-f=bd]').value; const o = tr.querySelector('[data-o=msg]'); const j = tr.querySelector('[data-o=jam]');
-    o.innerHTML = ''; j.textContent = ''; if (ak==='') return true;
-    if (st==='Ganti HM') { j.textContent = '0'; o.innerHTML = pill('HM diganti — wajib ket.','p-warn'); return true; }
-    if (prev===null) { o.innerHTML = pill('HM awal belum ada','p-info'); return true; }
-    const jam = +ak - prev; j.textContent = num(jam);
-    if (jam < 0) { o.innerHTML = pill('HM mundur','p-bad'); return false; }
-    if (jam > 24) { o.innerHTML = pill('> 24 jam','p-bad'); return false; }
-    if (bd!=='' && (+bd>24 || +bd + jam > 24)) { o.innerHTML = pill('Jam BD + operasi > 24','p-bad'); return false; }
-    if (st==='Operasi' && jam===0) o.innerHTML = pill('Operasi tapi 0 jam','p-warn');
-    if (st==='Breakdown' && jam>20) o.innerHTML = pill('Breakdown tapi jam penuh','p-warn');
+  const val = (tr, f) => { const e = tr.querySelector(`[data-f=${f}]`); return e ? e.value : ''; };
+  const calcRow = tr => { const prev = tr.dataset.prev==='' ? null : +tr.dataset.prev; const aw = val(tr,'awal'), ak = val(tr,'akhir'), st = val(tr,'status'), bd = val(tr,'bd'), jl = val(tr,'jl');
+    const ganti = st==='Ganti HM'; const jam = (aw===''||ak==='') ? null : (+ak - +aw) + (ganti ? (+jl||0) : 0);
+    return {prev, aw, ak, st, bd, jl, ganti, jam}; };
+  const recalc = tr => { const c = calcRow(tr); const o = tr.querySelector('[data-o=msg]'); const j = tr.querySelector('[data-o=jam]');
+    tr.querySelector('[data-o=jl]').style.display = c.ganti ? 'block' : 'none';
+    o.innerHTML = ''; j.textContent = ''; if (c.ak==='') return true;
+    if (c.aw==='') { o.innerHTML = pill('Isi HM awal','p-bad'); return false; }
+    j.textContent = num(c.jam);
+    if (+c.ak < +c.aw) { o.innerHTML = pill(c.ganti ? 'HM akhir < HM awal meter baru' : 'HM mundur — pilih "Ganti HM / engine" bila meter diganti','p-bad'); return false; }
+    if (c.jam > 24) { o.innerHTML = pill(`${num(c.jam)} jam > 24 — cek angka HM`,'p-bad'); return false; }
+    if (c.bd!=='' && (+c.bd>24 || +c.bd + c.jam > 24)) { o.innerHTML = pill('Jam BD + operasi > 24','p-bad'); return false; }
+    if (c.ganti && !val(tr,'ket')) { o.innerHTML = pill('Ganti HM — isi keterangan (mis. ganti engine)','p-warn'); return true; }
+    if (!c.ganti && c.prev!==null && +c.aw !== c.prev) { o.innerHTML = pill(`HM awal ≠ HM akhir kemarin (${num(c.prev)})`,'p-warn'); return true; }
+    if (c.prev===null) { o.innerHTML = pill('HM awal pertama','p-info'); }
+    if (c.st==='Operasi' && c.jam===0) o.innerHTML = pill('Operasi tapi 0 jam','p-warn');
+    if (c.st==='Breakdown' && c.jam>20) o.innerHTML = pill('Breakdown tapi jam penuh','p-warn');
     return true; };
-  document.querySelectorAll('tr[data-ek]').forEach(tr => tr.addEventListener('input', () => recalc(tr)));
-  document.querySelectorAll('tr[data-ek]').forEach(tr => recalc(tr));
+  document.querySelectorAll('tr[data-ek]').forEach(tr => { tr.addEventListener('input', () => recalc(tr)); tr.addEventListener('change', () => recalc(tr)); recalc(tr); });
   const sv = document.getElementById('ehmSave'); if (sv) sv.onclick = () => {
-    let bad = 0, n = 0; document.querySelectorAll('tr[data-ek]').forEach(tr => { if (!recalc(tr)) { bad++; return; } const ak = tr.querySelector('[data-f=akhir]').value; if (ak==='') return; const k = tr.dataset.ek; const prev = prevHM(k, dI.value); const st = tr.querySelector('[data-f=status]').value;
-      ST.ehm[k+'|'+dI.value] = {akhir:+ak, jam: st==='Ganti HM'||prev===null ? 0 : +ak-prev, bd: tr.querySelector('[data-f=bd]').value===''?0:+tr.querySelector('[data-f=bd]').value, status:st, ket:tr.querySelector('[data-f=ket]').value}; n++; });
+    let bad = 0, n = 0; document.querySelectorAll('tr[data-ek]').forEach(tr => { if (!recalc(tr)) { bad++; return; } const c = calcRow(tr); if (c.ak==='') return; const k = tr.dataset.ek;
+      ST.ehm[k+'|'+dI.value] = {awal:+c.aw, akhir:+c.ak, jam:c.jam, jl: c.ganti ? (+c.jl||0) : 0, bd: c.bd===''?0:+c.bd, status:c.st, ket:val(tr,'ket')}; n++; });
     if (bad) { toast(bad+' baris belum valid — perbaiki dulu (lihat tanda merah).'); return; }
     if (CLOUD_ON) cloud.ehm(dI.value);
     logc('Input EHM', `${dI.value} · ${n} alat`); save(); toast(`EHM ${dI.value} tersimpan untuk ${n} alat.`); render(); };
@@ -1122,7 +1140,7 @@ const cloud = {
     UPROWS.sp = sp.map(r => { if (r.kode_manual) ST.rowMap[r.id] = r.kode_manual; return {id:r.id, src:'SIGAP', t:r.terminal, bln:r.bulan, tgl:r.tanggal||'', wo:r.no_wo||'', mat:r.material||'', qty:+r.jumlah||0, sat:r.satuan||'', tot:+r.total||0, desk:r.deskripsi||'', nama:r.nama_asli||'(kosong)', b:r.batch_id}; });
     UPROWS.pr = prd.map(r => { if (r.kode_manual) ST.rowMap[r.id] = r.kode_manual; return {id:r.id, src:'TONUS', t:r.terminal, bln:r.bulan, nama:r.nama_asli||'', type:r.eq_type, task:r.task, s20:+r.s20||0, s40:+r.s40||0, s40h:+r.s40h||0, s45:+r.s45||0, box:+r.box||0, fm:r.fm, op:r.operator, b:r.batch_id}; });
     UPROWS.bb = bb.map(r => { if (r.kode_manual) ST.rowMap[r.id] = r.kode_manual; return {id:r.id, src:'P-FUEL', t:r.terminal, bln:r.bulan, ba:r.nomor_ba||'', tgl:r.tanggal||'', nama:r.nama_asli||'', jenis:r.jenis_bbm, vol:+r.volume||0, harga:+r.tarif||0, status:r.status, b:r.batch_id}; });
-    ST.ehm = {}; ehm.forEach(r => ST.ehm[r.kode_alat+'|'+r.tanggal] = {akhir:r.hm_akhir===null?null:+r.hm_akhir, jam:+r.jam||0, bd:+r.jam_bd||0, status:r.status, ket:r.keterangan||''});
+    ST.ehm = {}; ehm.forEach(r => ST.ehm[r.kode_alat+'|'+r.tanggal] = {awal:r.hm_awal==null?null:+r.hm_awal, akhir:r.hm_akhir===null?null:+r.hm_akhir, jl:+r.jam_meter_lama||0, jam:+r.jam||0, bd:+r.jam_bd||0, status:r.status, ket:r.keterangan||''});
     ST.avail = {}; av.forEach(r => ST.avail[r.kode_alat+'|'+r.bulan] = r.nilai===null?null:+r.nilai);
     ST.anom = {}; an.forEach(r => ST.anom[r.id] = r.status);
     ST.locks = {}; lk.forEach(r => ST.locks[r.terminal+'|'+r.bulan] = true);
@@ -1148,7 +1166,7 @@ const cloud = {
   alias(a){ this.bg(this.insert('alias', [{sumber:a.s, terminal:a.t, nama_asli:a.n, kode_alat:a.k, keyakinan:a.y||'Manual', metode:a.m||'', status:a.st, dibuat_oleh:a.by||this.profile?.email||''}], 'sumber,terminal,nama_asli'), 'alias'); },
   aliasDel(a){ this.bg(this.del('alias', `sumber=eq.${this.q(a.s)}&terminal=eq.${this.q(a.t)}&nama_asli=eq.${this.q(a.n)}`), 'alias'); },
   rowMap(id, k){ const src = ['sp','pr','bb'].find(kd => DATA[kd].some(r => r.id===id)); const tbl = {sp:'sparepart', pr:'produksi', bb:'bbm'}[src]; if (tbl) this.bg(this.patch(tbl, `id=eq.${this.q(id)}`, {kode_manual:k}), 'pemetaan baris'); },
-  ehm(d){ const rows = Object.entries(ST.ehm).filter(([key]) => key.endsWith('|'+d)).map(([key,v]) => { const k = key.split('|')[0]; return {kode_alat:k, tanggal:d, terminal:ALAT[k]?.t, hm_akhir:v.akhir, jam:v.jam, jam_bd:v.bd, status:v.status, keterangan:v.ket||null, petugas:this.profile?.email||''}; });
+  ehm(d){ const rows = Object.entries(ST.ehm).filter(([key]) => key.endsWith('|'+d)).map(([key,v]) => { const k = key.split('|')[0]; return {kode_alat:k, tanggal:d, terminal:ALAT[k]?.t, hm_awal:v.awal??null, hm_akhir:v.akhir, jam_meter_lama:v.jl||0, jam:v.jam, jam_bd:v.bd, status:v.status, keterangan:v.ket||null, petugas:this.profile?.email||''}; });
     if (rows.length) this.bg(this.insert('ehm', rows, 'kode_alat,tanggal'), 'EHM'); },
   avail(k, bln, v){ this.bg(this.insert('availability', [{kode_alat:k, tahun:YEAR, bulan:bln, terminal:ALAT[k]?.t, nilai:v}], 'kode_alat,tahun,bulan'), 'availability'); },
   anom(id, t, st){ this.bg(this.insert('anomali_status', [{id, terminal:t||null, status:st, oleh:this.profile?.email||''}], 'id'), 'status anomali'); },
