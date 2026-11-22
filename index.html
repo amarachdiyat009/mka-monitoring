@@ -272,14 +272,14 @@ function rowRev(r, keg){
 function termsSel(){ return UI.fterm==='ALL' ? TERMS.map(t=>t.k) : [UI.fterm]; }
 function calc(terms, bln){
   const A = {};
-  Object.values(ALAT).filter(a => terms.includes(a.t)).forEach(a => A[a.k] = {a, sp:0, spn:0, bbL:0, bbRp:0, lump:lumpsum(a.k,bln), av:avail(a.k,bln), jam:jamOperasi(a.k,bln), bd:jamBD(a.k,bln), mv:0, dBox:0, dTeu:0, gBox:0, gTeu:0, revD:0, revL:0, revMiss:false, unpaid:0, bk:{}});
+  Object.values(ALAT).filter(a => terms.includes(a.t)).forEach(a => A[a.k] = {a, sp:0, spn:0, bbL:0, bbRp:0, lump:lumpsum(a.k,bln), av:avail(a.k,bln), jam:jamOperasi(a.k,bln), bd:jamBD(a.k,bln), mv:0, mvTeu:0, dBox:0, dTeu:0, gBox:0, gTeu:0, revD:0, revL:0, revMiss:false, unpaid:0, bk:{}});
   const T = {}; terms.forEach(t => T[t] = {sp:0, spUn:0, bbL:0, bbRp:0, genL:0, genRp:0, lump:0, dBox:0, dTeu:0, gBox:0, revD:0, revL:0, prod:false, hasSp:false, hasBb:false, unmapped:0});
   DATA.sp.forEach(r => { if (r.bln!==bln || !T[r.t]) return; T[r.t].hasSp = true; if (r.k && A[r.k]) { A[r.k].sp += r.tot; A[r.k].spn++; } else T[r.t].spUn += r.tot; T[r.t].sp += r.tot; });
   DATA.bb.forEach(r => { if (r.bln!==bln || !T[r.t] || r.status!=='Realisasi Terverifikasi') return; T[r.t].hasBb = true; const rp = r.vol*r.harga;
     if (r.k && ALAT[r.k] && ALAT[r.k].j==='GNS') { T[r.t].genL += r.vol; T[r.t].genRp += rp; if (A[r.k]) { A[r.k].bbL += r.vol; A[r.k].bbRp += rp; } return; }
     if (r.k && A[r.k]) { A[r.k].bbL += r.vol; A[r.k].bbRp += rp; } T[r.t].bbL += r.vol; T[r.t].bbRp += rp; });
   DATA.pr.forEach(r => { if (r.bln!==bln || !T[r.t]) return; T[r.t].prod = true; const x = r.k && A[r.k]; if (!x) { T[r.t].unmapped += r.box; return; }
-    x.mv += r.box; const g = x.a.g;
+    x.mv += r.box; x.mvTeu += teus(r); const g = x.a.g;
     const addBk = (keg, s) => { const n20 = r.s20, n40 = r.s40 + r.s40h + r.s45; [['20',n20],['40',n40]].forEach(([uk,n]) => { if (!n) return; const key = uk+r.fm; const o = x.bk[key] = x.bk[key] || {b:0, rp:0, tarif: keg ? tarif(r.t, keg, uk, r.fm) : null}; o.b += s*n; o.rp += s*n*(o.tarif||0); }); };
     if (g==='DERMAGA' && (r.task==='Loading' || r.task==='Discharging')) { x.dBox += r.box; x.dTeu += teus(r); addBk('STEVEDORING', 1); const v = rowRev(r,'STEVEDORING'); if (v===null) x.revMiss = true; else x.revD += v; }
     else if (g==='BANTU') addBk(null, 1);   // alat bantu: semua gerakan, tanpa rupiah
@@ -307,7 +307,7 @@ function calcMulti(terms, months){
   if (months.length===1) return calc(terms, months[0]);
   const parts = months.map(m => calc(terms, m));
   const A = {}, T = {};
-  const AN = ['sp','spn','bbL','bbRp','lump','mv','dBox','dTeu','gBox','gTeu','revD','revL','biaya','rev','jam'];
+  const AN = ['sp','spn','bbL','bbRp','lump','mv','mvTeu','dBox','dTeu','gBox','gTeu','revD','revL','biaya','rev','jam'];
   const TN_ = ['sp','spUn','bbL','bbRp','genL','genRp','lump','dBox','dTeu','gBox','revD','revL','unmapped'];
   parts.forEach(p => {
     Object.entries(p.A).forEach(([k,x]) => { const a = A[k] = A[k] || {a:x.a, jam:null}; AN.forEach(f => { if (f==='jam') { if (x.jam!==null) a.jam = (a.jam||0) + x.jam; } else a[f] = (a[f]||0) + (x[f]||0); }); });
@@ -693,7 +693,7 @@ function justifyCard(R, terms, ms){
 }
 
 /* ---------- panel total biaya + donut ---------- */
-const KCOL = {DERMAGA:'#0ea5a4', LAPANGAN:'#3b82f6', BANTU:'#f59e0b'};
+const KCOL = {DERMAGA:'#3b82f6', LAPANGAN:'#14b8a6', BANTU:'#f59e0b'};   // sama dengan KELC agar warna kelompok konsisten di semua grafik
 function donutSvg(parts, size, thick, center){
   const tot = parts.reduce((a,p)=>a+p.v,0) || 1, r = (size-thick)/2, C = 2*Math.PI*r, gap = parts.filter(p=>p.v>0).length>1 ? 3 : 0;
   let off = 0, seg = '';
@@ -731,24 +731,30 @@ function biayaPanel(kg, rows){
 
 /* ---------- detail per alat dari tabel terminal (Beranda) ---------- */
 function alatDetail(R, term, ms){
-  const prodOf = x => x.a.g==='DERMAGA' ? x.dBox : x.a.g==='LAPANGAN' ? x.gBox : x.mv;
-  const satOf = g => g==='DERMAGA' ? 'box dermaga' : g==='LAPANGAN' ? 'box dibayar (gate)' : 'gerakan';
+  const boxOf = x => x.a.g==='DERMAGA' ? x.dBox : x.a.g==='LAPANGAN' ? x.gBox : x.mv;
+  const teuOf = x => x.a.g==='DERMAGA' ? x.dTeu : x.a.g==='LAPANGAN' ? x.gTeu : (x.mvTeu||0);
   const rows = Object.values(R.A).filter(x => x.a.t===term && x.a.j!=='GNS' && (x.biaya>0 || x.rev>0 || x.mv>0)).map(x => {
-    const p = prodOf(x);
-    return {k:x.a.k, g:KELN[x.a.g], gk:x.a.g, j:x.a.j==='GNS'?'Genset (terpisah)':JEN[x.a.j], prod:p, sat:satOf(x.a.g), rev:x.rev, sp:x.sp, bb:x.bbRp, lump:x.lump, biaya:x.biaya, unit: p ? x.biaya/p : null, margin: x.rev ? x.rev - x.biaya : null, ord:{DERMAGA:0,LAPANGAN:1,BANTU:2}[x.a.g]};
+    const bx = boxOf(x), te = teuOf(x);
+    return {k:x.a.k, gk:x.a.g, j:JEN[x.a.j], box:bx, teu:te, rev:x.rev, sp:x.sp, bb:x.bbRp, bbL:x.bbL, lump:x.lump, biaya:x.biaya,
+      perTeu: te ? x.biaya/te : null, perBox: bx ? x.biaya/bx : null, lTeu: te && x.bbL ? x.bbL/te : null, lBox: bx && x.bbL ? x.bbL/bx : null,
+      margin: x.rev ? x.rev - x.biaya : null, ord:{DERMAGA:0,LAPANGAN:1,BANTU:2}[x.a.g]};
   });
   const kg = {}; rows.forEach(r => { const o = kg[r.gk] = kg[r.gk]||{n:0,rev:0,biaya:0}; o.n++; o.rev += r.rev; o.biaya += r.biaya; });
   const sum = f => rs => rs.reduce((s,r)=>s+(r[f]||0),0);
   let h = `<div style="margin-top:14px;border-top:2px solid var(--teal);padding-top:12px"><h3 style="margin:0 0 8px">Biaya Detail per alat · ${esc(term)} · ${esc(TN[term])} <small>${berPeriodTxt(ms)}</small></h3>`;
   h += biayaPanel(kg, rows);
+  const dsh = v => v ? rp(v) : '–', dl = v => v ? dec(v,2) : '–';
   h += table('ber_alat',[
-    {k:'k',h:'Kode alat',f:v=>'<b>'+esc(v)+'</b>'},{k:'g',h:'Kelompok',x:r=>r.g},{k:'prod',h:'Produksi',n:1,f:(v,r)=>v?num(v)+' <span class="muted" style="font-size:11px">'+r.sat+'</span>':'–',x:r=>r.prod},
-    {k:'rev',h:'Pendapatan',n:1,f:v=>v?rp(v):'–',x:r=>r.rev},{k:'sp',h:'Sparepart',n:1,f:rp,x:r=>r.sp},{k:'bb',h:'BBM',n:1,f:rp,x:r=>r.bb},{k:'lump',h:'Lumpsum SLA',n:1,f:rp,x:r=>r.lump},
-    {k:'biaya',h:'Total biaya',n:1,f:v=>'<b>'+rp(v)+'</b>',x:r=>r.biaya},{k:'unit',h:'Biaya per produksi',n:1,f:v=>v?rp(v):'–',x:r=>r.unit},
+    {k:'k',h:'Kode alat',f:(v,r)=>`<span style="display:inline-block;width:4px;height:14px;border-radius:2px;background:${KCOL[r.gk]};vertical-align:-2px;margin-right:7px"></span><b>${esc(v)}</b>`,x:r=>r.k},
+    {k:'box',h:'Box',n:1,f:v=>v?num(v):'–',x:r=>r.box},{k:'teu',h:'TEUs',n:1,f:v=>v?num(v):'–',x:r=>r.teu},{k:'rev',h:'Pendapatan',n:1,f:dsh,x:r=>r.rev},
+    {k:'sp',h:'Sparepart',n:1,f:rp,x:r=>r.sp},{k:'bb',h:'BBM',n:1,f:rp,x:r=>r.bb},{k:'lump',h:'Lumpsum SLA',n:1,f:rp,x:r=>r.lump},
+    {k:'biaya',h:'Total biaya',n:1,f:v=>'<b>'+rp(v)+'</b>',x:r=>r.biaya},
+    {k:'perTeu',h:'Biaya/TEUs',n:1,f:dsh,x:r=>r.perTeu},{k:'perBox',h:'Biaya/box',n:1,f:dsh,x:r=>r.perBox},{k:'lTeu',h:'L/TEUs',n:1,f:dl,x:r=>r.lTeu},{k:'lBox',h:'L/box',n:1,f:dl,x:r=>r.lBox},
     {k:'margin',h:'Pendapatan − biaya',n:1,f:v=>v===null||v===undefined?'–':(v<0?pill(rp(v),'p-bad'):rp(v)),x:r=>r.margin}],
     rows,{sort:'ord',dir:1,h:520,total:rs=>({rev:sum('rev')(rs),sp:sum('sp')(rs),bb:sum('bb')(rs),lump:sum('lump')(rs),biaya:sum('biaya')(rs),margin:sum('rev')(rs)-sum('biaya')(rs)})});
+  h += `<div class="legend" style="margin-top:6px">${['DERMAGA','LAPANGAN','BANTU'].map(g => `<span><i style="background:${KCOL[g]}"></i>${esc(KELN[g])}</span>`).join('')}</div>`;
   const un = R.T[term]; const extra = (un.spUn||0); const gen = un.genRp||0;
-  h += `<div class="muted" style="font-size:12px;margin-top:6px">Pendapatan hanya pada alat utama: dermaga dari Loading + Discharging, lapangan dari Gate In + Gate Out. Alat bantu tidak punya pendapatan langsung.${gen?` Genset ${rp(gen)} dipisahkan.`:''}${extra?` Sparepart tanpa alat (antrian pemetaan) ${rp(extra)} tidak masuk tabel ini tetapi tetap dihitung di total terminal.`:''}</div></div>`;
+  h += `<div class="muted" style="font-size:12px;margin-top:6px">Box &amp; TEUs: alat utama dermaga dari Loading + Discharging, alat utama lapangan dari Gate In + Gate Out, alat bantu dari semua gerakan. Pendapatan hanya pada alat utama; alat bantu tidak punya pendapatan langsung.${gen?` Genset ${rp(gen)} dipisahkan.`:''}${extra?` Sparepart tanpa alat (antrian pemetaan) ${rp(extra)} tidak masuk tabel ini tetapi tetap dihitung di total terminal.`:''}</div></div>`;
   return h;
 }
 
