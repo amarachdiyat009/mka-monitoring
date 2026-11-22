@@ -117,6 +117,62 @@ code{background:#f1f5f9;padding:1px 6px;border-radius:6px;font-size:12px}
 .bp-rv span{display:block;font-size:11px;color:#64748b}.bp-rv b{font-size:14px}.bp-rv .pos{color:#047857}.bp-rv .neg{color:#b91c1c}
 .bp-ratio{height:4px;margin-top:6px!important;background:#e7f8f1;border-radius:4px;margin-top:8px;overflow:hidden}.bp-ratio span{display:block;height:100%;background:linear-gradient(90deg,#34d399,#10b981)}.bp-ratio.over{background:#fdecec}.bp-ratio.over span{background:linear-gradient(90deg,#f87171,#dc2626)}
 @media(max-width:980px){.bp-wrap{grid-template-columns:1fr}}
+
+.hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:10px}
+.hk{position:relative;overflow:hidden;padding:14px 16px}
+.hk:before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--hc)}
+.hk-l{font-size:12px;font-weight:700;color:#64748b;letter-spacing:.2px}
+.hk-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:4px}
+.hk-v{font-size:26px;font-weight:800;letter-spacing:-.8px;color:#0f172a;line-height:1.1;white-space:nowrap}
+.hk-d{margin-top:4px;font-size:12.5px}.hk-s{font-size:11.5px;color:#94a3b8;margin-top:3px;line-height:1.35}
+.delta{font-weight:800;padding:1px 7px;border-radius:20px;font-size:11.5px}
+.delta.good{background:#e7f8f1;color:#047857}.delta.bad{background:#fdecec;color:#b91c1c}.delta.flat{background:#f1f5f9;color:#64748b}
+.spark{flex:none;display:block}
+.grid.g2b{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;margin-bottom:12px}
+.att{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:9px 6px;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.45;cursor:pointer;border-radius:8px}
+.att:hover{background:#f8fafc}.att .pill{white-space:nowrap;margin-top:1px}.att-go{font-size:11.5px;color:#94a3b8;font-weight:700;white-space:nowrap}
+.dot{display:inline-block;min-width:22px;height:22px;line-height:22px;border-radius:11px;font-size:11px;font-weight:800;padding:0 6px}
+.dot.ok{background:#e7f8f1;color:#047857}.dot.no{background:#fdecec;color:#b91c1c}.dot.pt{background:#fff4e0;color:#b45309}
+.mini-stack{display:flex;height:4px;border-radius:3px;overflow:hidden;gap:1px;margin-top:4px;min-width:90px;margin-left:auto}
+.neg{color:#b91c1c}.pos{color:#047857}
+.am-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seg{display:inline-flex;flex-wrap:wrap;background:#f1f5f9;border-radius:10px;padding:3px;gap:2px}
+.seg button{background:transparent;color:#475569;border:0;padding:6px 11px;border-radius:8px;font-size:12.5px;font-weight:600;box-shadow:none;cursor:pointer}
+.seg button.on{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(15,23,42,.12)}
+.seg.sm2 button{font-size:11.5px;padding:4px 10px}
+.am-row{display:grid;grid-template-columns:230px 1fr 150px;gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid #f5f7fa}
+.am-lab{display:flex;align-items:center;gap:7px;font-size:13px;min-width:0}.am-lab b{white-space:nowrap;flex:none}.am-lab span:last-child{color:#94a3b8;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kdot{width:4px;height:16px;border-radius:2px;flex:none}
+.am-bars{display:grid;gap:3px}
+.am-b{position:relative;height:12px;background:#f1f5f9;border-radius:6px}.am-b.one{height:16px;border-radius:8px}
+.am-b span{position:absolute;left:0;top:0;bottom:0;border-radius:inherit;min-width:2px}
+.am-b em{position:absolute;right:6px;top:-1px;font-style:normal;font-size:10px;color:#64748b;line-height:14px}
+.am-b i{position:absolute;top:-3px;bottom:-3px;width:2px;background:#0f172a;border-radius:1px}
+.am-val{text-align:right;font-weight:800;font-size:13.5px}.am-val small{display:block;font-weight:600;color:#94a3b8;font-size:11px}
+@media(max-width:1100px){.hero{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.g2b{grid-template-columns:1fr}.am-row{grid-template-columns:150px 1fr 110px}}
+
+.gt-w{border:1px solid var(--line);border-radius:12px}
+table.gt{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:100%}
+table.gt th,table.gt td{padding:7px 10px;white-space:nowrap;border-bottom:1px solid #f1f5f9}
+table.gt thead th{position:sticky;background:#f8fafc;z-index:2;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:#64748b}
+table.gt thead tr:first-child th{top:0;height:30px}table.gt thead tr:nth-child(2) th{top:30px}
+table.gt th.gh{text-align:center;color:#0f172a;font-weight:800;border-bottom:3px solid var(--gc);background:color-mix(in srgb,var(--gc) 9%,#fff)}
+table.gt th.gh.blank{border-bottom:3px solid transparent;background:#f8fafc}
+table.gt .stick{position:sticky;left:0;background:#fff;z-index:1;border-right:1px solid #eef2f6}
+table.gt thead .stick{z-index:3;background:#f8fafc}
+table.gt tbody tr:hover td{background:#f8fbff}
+table.gt tr.gt-head td{background:#f8fafc;font-weight:800;font-size:12px;color:#334155;padding-top:10px}
+table.gt .gt-hl{position:sticky;left:10px;display:inline-flex;align-items:center}table.gt tr.gt-head .kdot{display:inline-block;vertical-align:-3px;margin-right:8px}
+table.gt tr.gt-sub td{background:#f1f5f9;font-weight:700}
+table.gt tr.tot td{background:#e2e8f0;font-weight:800}
+table.gt td.n,table.gt th.n{text-align:right}
+.bt-link{font-weight:800;text-decoration:none}
+.chain{margin-top:12px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:linear-gradient(135deg,#fff,#fdf2f8)}
+.chain-t{font-weight:800;font-size:13px}.chain-t small{font-weight:500;color:#94a3b8;margin-left:6px}
+.chain-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.chain-c{border-left:4px solid var(--kc);background:#fff;border-radius:10px;padding:8px 12px;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+.chain-c span{display:block;font-size:11px;color:#64748b}.chain-c b{font-size:17px}.chain-c em{display:block;font-style:normal;font-size:11px;color:#94a3b8}
+.chain-c.tot{--kc:#ec4899;background:#fff0f7}.chain-plus{font-size:20px;font-weight:800;color:#94a3b8}
 </style>
 </head>
 <body>
@@ -310,7 +366,8 @@ function calcMulti(terms, months){
   const AN = ['sp','spn','bbL','bbRp','lump','mv','mvTeu','dBox','dTeu','gBox','gTeu','revD','revL','biaya','rev','jam'];
   const TN_ = ['sp','spUn','bbL','bbRp','genL','genRp','lump','dBox','dTeu','gBox','revD','revL','unmapped'];
   parts.forEach(p => {
-    Object.entries(p.A).forEach(([k,x]) => { const a = A[k] = A[k] || {a:x.a, jam:null}; AN.forEach(f => { if (f==='jam') { if (x.jam!==null) a.jam = (a.jam||0) + x.jam; } else a[f] = (a[f]||0) + (x[f]||0); }); });
+    Object.entries(p.A).forEach(([k,x]) => { const a = A[k] = A[k] || {a:x.a, jam:null, bk:{}}; AN.forEach(f => { if (f==='jam') { if (x.jam!==null) a.jam = (a.jam||0) + x.jam; } else a[f] = (a[f]||0) + (x[f]||0); });
+      Object.entries(x.bk||{}).forEach(([bk,o]) => { const q = a.bk[bk] = a.bk[bk] || {b:0, rp:0, tarif:o.tarif}; q.b += o.b; q.rp += o.rp; }); });
     Object.entries(p.T).forEach(([k,x]) => { const o = T[k] = T[k] || {prod:false, hasSp:false, hasBb:false}; TN_.forEach(f => o[f] = (o[f]||0) + (x[f]||0)); o.prod = o.prod||x.prod; o.hasSp = o.hasSp||x.hasSp; o.hasBb = o.hasBb||x.hasBb; });
   });
   Object.values(A).forEach(x => { if (x.a.g==='LAPANGAN' && x.mv) x.unpaid = (x.mv - x.gBox)/x.mv; });
@@ -567,57 +624,216 @@ P.beranda = () => {
       : `<label class="ctl">${md==='bulan'?'Bulan':md==='tw'?'Triwulan dari bulan':'Sampai bulan'}<select id="bBln">${MONTHS.map(m=>`<option value="${m}" ${m===UI.bln?'selected':''}>${md==='tw'?'TW '+Math.ceil(m/3)+' · ':''}${BLN[m-1]} ${YEAR}</option>`).join('')}</select></label>`}
     <span class="muted" style="margin-left:auto">Menampilkan: <b>${berPeriodTxt(ms)}</b> · ${scopeTxt()}</span></div></div>`;
   if (!DATA.sp.length && !DATA.pr.length && !DATA.bb.length) h += `<div class="warnbox"><b>Data masih kosong.</b> Mulai dengan upload di menu <a href="#produksi">Produksi</a> (Tonus), <a href="#sparepart">Sparepart</a> (SIGAP), dan <a href="#bbm">BBM</a> (P-Fuel), lalu isi availability di <a href="#sla">Lumpsum / SLA</a> dan jam di <a href="#ehm">EHM Harian</a>. Master alat, alias, tarif, dan faktor SLA sudah terisi.</div>`;
-  h += `<div class="grid k4">`+
-    kpi('Produksi dermaga', num(tot.dBox)+' box', num(tot.dTeu)+' TEUs')+
-    kpi('Pendapatan (estimasi tarif)', rp(tot.rev), `Dermaga ${rp(tot.revD)} · Lapangan ${rp(tot.revL)}`)+
-    kpi('Total biaya alat', rp(tot.biaya), `Sparepart ${rp(tot.sp)} · BBM ${rp(tot.bbRp)} · Lumpsum ${rp(tot.lump)}`)+
-    kpi('Biaya per TEUs', tot.perTeuProd ? rp(tot.perTeuProd) : '–', ms.length>1 ? 'hanya bulan & terminal yang ada data produksi' : 'total biaya ÷ TEUs dermaga', true)+
-    kpi('Biaya per box', tot.perBoxProd ? rp(tot.perBoxProd) : '–', 'total biaya ÷ box dermaga', true)+
-    kpi('Liter BBM per TEUs', tot.lTeu ? dec(tot.lTeu,2)+' L' : '–', 'liter alat ÷ TEUs dermaga')+
-    kpi('Liter BBM per box', tot.lBox ? dec(tot.lBox,2)+' L' : '–', 'liter alat ÷ box dermaga')+
-    kpi('Biaya BBM per TEUs', tot.bbPerTeu ? rp(tot.bbPerTeu) : '–', `genset dipisah: ${num(tot.genL)} L · ${rp(tot.genRp)}`)+
-    kpi('Biaya BBM per box', tot.bbPerBox ? rp(tot.bbPerBox) : '–', 'biaya BBM alat ÷ box dermaga')+
-    `</div>`;
-  h += `<div class="note">Periode <b>${berPeriodTxt(ms)}</b> · ${scopeTxt()}. Pendapatan = produksi × tarif domestik (sementara). TEUs: 20' = 1, 40'/40'H/45' = 2. Biaya per TEUs dan per box hanya dihitung untuk terminal yang produksinya sudah di-upload; sparepart tanpa alat tetap dihitung sebagai biaya terminal.</div>`;
-  // per terminal
-  const rows = terms.map(t => ({t, n:TN[t], ...T[t]}));
-  h += `<div class="card"><h3>Biaya & pendapatan per terminal <small>${berPeriodTxt(ms)}</small></h3>`+table('ber_term',[
-    {k:'t',h:'Terminal',f:v=>`<a href="#" data-bt="${v}" style="font-weight:700;text-decoration:none">${UI.berT===v?'▾':'▸'} ${v}</a>`,x:r=>r.t},{k:'dBox',h:'Box dermaga',n:1,f:num},{k:'dTeu',h:'TEUs',n:1,f:num},{k:'rev',h:'Pendapatan',n:1,f:rp},
-    {k:'sp',h:'Sparepart',n:1,f:rp},{k:'bbRp',h:'BBM',n:1,f:rp},{k:'lump',h:'Lumpsum SLA',n:1,f:rp},{k:'biaya',h:'Total biaya',n:1,f:(v)=>'<b>'+rp(v)+'</b>'},
-    {k:'perTeu',h:'Biaya/TEUs',n:1,f:rp},{k:'perBox',h:'Biaya/box',n:1,f:rp},{k:'lTeu',h:'L/TEUs',n:1,f:v=>dec(v,2)},{k:'lBox',h:'L/box',n:1,f:v=>dec(v,2)},{k:'genRp',h:'Genset (terpisah)',n:1,f:rp},{k:'margin',h:'Pendapatan − biaya',n:1,f:(v,r)=>r.rev? rp(r.rev-r.biaya):'–', x:r=>r.rev? r.rev-r.biaya:null}],
-    rows,{search:false,sort:'biaya',rowCls:r=>r.biaya>0||r.dBox>0?'':'dim'})+`<div class="muted" style="font-size:12px;margin-top:6px">Klik nama terminal untuk melihat biaya & pendapatan per alat.</div>`+(UI.berT && terms.includes(UI.berT) ? alatDetail(R, UI.berT, ms) : '')+`</div>`;
-  if (R.parts) {
-    const lab = ms.map(m => BLN[m-1]);
-    h += `<div class="grid g2"><div class="card"><h3>Tren biaya per bulan</h3>`+vbars(lab, [{name:'Sparepart',c:'var(--c3)',vals:R.parts.map(p=>p.tot.sp)},{name:'BBM',c:'var(--c2)',vals:R.parts.map(p=>p.tot.bbRp)},{name:'Lumpsum SLA',c:'var(--c1)',vals:R.parts.map(p=>p.tot.lump)}], {fmt:v=>dec(v/1e9,1)+' M'})+`</div>`;
-    h += `<div class="card"><h3>Produksi, biaya per TEUs & per box per bulan</h3><table><tr><th>Bulan</th><th class="n">Box dermaga</th><th class="n">TEUs</th><th class="n">Total biaya</th><th class="n">Biaya/TEUs</th><th class="n">Biaya/box</th><th class="n">L/TEUs</th><th class="n">L/box</th></tr>`+R.parts.map((p,i) => `<tr><td>${lab[i]}</td><td class="n">${num(p.tot.dBox)}</td><td class="n">${num(p.tot.dTeu)}</td><td class="n">${rp(p.tot.biaya)}</td><td class="n">${p.tot.perTeuProd?rp(p.tot.perTeuProd):'–'}</td><td class="n">${p.tot.perBoxProd?rp(p.tot.perBoxProd):'–'}</td><td class="n">${p.tot.lTeu?dec(p.tot.lTeu,2):'–'}</td><td class="n">${p.tot.lBox?dec(p.tot.lBox,2):'–'}</td></tr>`).join('')+`</table></div></div>`;
-  }
-  // kelengkapan (bulan terakhir pada periode)
+  h += dirHero(terms, ms, R);
+  // perlu perhatian + status data
   const kb = ms.at(-1); const Kc = R.parts ? R.parts.at(-1) : R;
-  h += `<div class="grid g2"><div class="card"><h3>Kelengkapan data <small>${BLN[kb-1]} ${YEAR} · batas upload 7 ${BLN[kb%12]}</small></h3><table class="matrix"><tr><th style="text-align:left">Terminal</th><th>Produksi</th><th>Sparepart</th><th>BBM</th><th>EHM</th><th>Availability</th><th>Status</th></tr>`+
+  h += `<div class="grid g2b">${attentionCard(terms, ms, R)}<div class="card"><h3>Status data <small>${BLN[kb-1]} ${YEAR} · batas upload 7 ${BLN[kb%12]}</small></h3><table class="matrix"><tr><th style="text-align:left">Terminal</th><th>Produksi</th><th>Sparepart</th><th>BBM</th><th>EHM</th><th title="Availability SLA">Avail.</th></tr>`+
     terms.map(t => { const act = Object.values(ALAT).filter(a => a.t===t && a.st==='aktif' && a.j!=='CHS' && a.j!=='GNS');
       const nE = act.filter(a => jamOperasi(a.k,kb)!==null).length; const slaA = act.filter(a => a.sla); const nA = slaA.filter(a => avail(a.k,kb)!==null).length;
-      const c = v => v ? pill('✓','p-ok') : pill('belum','p-bad');
-      const part = (n, of) => n===0 ? pill('belum','p-bad') : n>=of ? pill('✓','p-ok') : `<span class="pill p-warn" title="${n} dari ${of} alat sudah terisi">${n}/${of} alat</span>`;
-      return `<tr><td style="text-align:left">${t}</td><td>${c(Kc.T[t].prod)}</td><td>${c(Kc.T[t].hasSp)}</td><td>${c(Kc.T[t].hasBb)}</td><td>${part(nE, act.length)}</td><td>${part(nA, slaA.length)}</td><td>${locked(t,kb)?pill('Terkunci','p-mute'):pill('Terbuka','p-info')}</td></tr>`; }).join('')+`</table></div>`;
-  // per kelompok
-  const kg = {DERMAGA:{b:0,r:0,n:0},LAPANGAN:{b:0,r:0,n:0},BANTU:{b:0,r:0,n:0}}; Object.values(A).forEach(x => { if (x.a.j==='GNS') return; kg[x.a.g].b += x.biaya; kg[x.a.g].r += x.rev; kg[x.a.g].n++; });
-  h += `<div class="card"><h3>Biaya per kelompok alat</h3>`+hbars(Object.entries(kg).map(([k,v]) => ({label:KELN[k]+' ('+v.n+')', v:v.b, c:KELC[k]})), {fmt:rp, lw:190})+
-    `<table style="margin-top:8px"><tr><th>Kelompok</th><th class="n">Biaya</th><th class="n">Pendapatan</th></tr>`+Object.entries(kg).map(([k,v]) => `<tr><td>${KELN[k]}</td><td class="n">${rp(v.b)}</td><td class="n">${v.r?rp(v.r):'–'}</td></tr>`).join('')+`</table></div></div>`;
-  // top alat
-  const top = Object.values(A).filter(x => x.biaya>0 && x.a.j!=='GNS').sort((a,b) => b.biaya-a.biaya).slice(0,12);
-  h += `<div class="grid g2"><div class="card"><h3>12 alat dengan biaya tertinggi <small>sparepart + BBM + lumpsum</small></h3>`+hbars(top.map(x => ({label:x.a.k, v:x.biaya, c:KELC[x.a.g]})), {fmt:rp, lw:120})+
-    `<div class="legend">${Object.keys(KELN).map(k => `<span><i style="background:${KELC[k]}"></i>${KELN[k]}</span>`).join('')}</div></div>`;
-  h += justifyCard(R, terms, ms);
+      const c = v => v ? '<span class="dot ok">✓</span>' : '<span class="dot no">✕</span>';
+      const part = (n, of) => n===0 ? '<span class="dot no">✕</span>' : n>=of ? '<span class="dot ok">✓</span>' : `<span class="dot pt" title="${n} dari ${of} alat">${n}/${of}</span>`;
+      return `<tr><td style="text-align:left"><b>${t}</b>${locked(t,kb)?' <span title="Periode terkunci">🔒</span>':''}</td><td>${c(Kc.T[t].prod)}</td><td>${c(Kc.T[t].hasSp)}</td><td>${c(Kc.T[t].hasBb)}</td><td>${part(nE, act.length)}</td><td>${part(nA, slaA.length)}</td></tr>`; }).join('')+`</table><div class="muted" style="font-size:11.5px;margin-top:8px">Angka laporan baru final setelah semua kolom ✓ dan periode dikunci.</div></div></div>`;
+  // per terminal (format laporan kinerja)
+  h += `<div class="card"><h3>Laporan kinerja per terminal <small>${berPeriodTxt(ms)}</small></h3>`+laporanTerminal(R, terms, ms)+
+    (UI.berT && terms.includes(UI.berT) ? alatDetail(R, UI.berT, ms) : '')+`</div>`;
+  // monitoring per alat
+  h += alatMonitor(R, ms);
+  // justifikasi
+  h += `<div style="margin-top:12px">`+justifyCard(R, terms, ms);   // justifyCard menutup div pembungkus ini
   const nAn = anom.length; if (nAn) h += `<div class="note" style="margin-top:12px">Ada <b>${nAn} anomali terbuka</b> untuk ${BLN[ms.at(-1)-1]} ${YEAR} — lihat di menu <a href="#analisa">Analisa & Anomali</a>.</div>`;
+  h += `<div class="muted" style="font-size:11.5px;margin-top:10px">Pendapatan = produksi × tarif domestik. TEUs: 20' = 1, 40'/40'H/45' = 2. Biaya/TEUs, Biaya/box, L/TEUs dan L/box tingkat terminal memakai produksi dermaga (Loading + Discharging); genset dipisahkan.</div>`;
   return h;
 };
-P.beranda.after = () => { drawTable('ber_term'); drawTable('ber_alat');
-  document.getElementById('main').querySelectorAll('#ber_term').forEach(tb => tb.addEventListener('click', e => { const a = e.target.closest('[data-bt]'); if (!a) return; e.preventDefault(); UI.berT = UI.berT===a.dataset.bt ? null : a.dataset.bt; render(); }));
+P.beranda.after = () => {
+  document.querySelectorAll('[data-am]').forEach(b => b.onclick = () => { UI.amM = b.dataset.am; UI.amAll = false; render(); });
+  document.querySelectorAll('[data-amk]').forEach(b => b.onclick = () => { UI.amK = b.dataset.amk; UI.amAll = false; render(); });
+  document.querySelectorAll('[data-amall]').forEach(b => b.onclick = () => { UI.amAll = !UI.amAll; render(); });
+  document.querySelectorAll('[data-att]').forEach(d => d.onclick = () => { UI.berT = d.dataset.att; render(); const el = document.getElementById('ber_term2'); if (el) setTimeout(() => el.closest('.card').scrollIntoView({behavior:'smooth'}), 50); });
+  document.getElementById('main').querySelectorAll('#ber_term, #ber_term2').forEach(tb => tb.addEventListener('click', e => { const a = e.target.closest('[data-bt]'); if (!a) return; e.preventDefault(); UI.berT = UI.berT===a.dataset.bt ? null : a.dataset.bt; render(); }));
   document.querySelectorAll('[data-bm]').forEach(b => b.onclick = () => { UI.bmode = b.dataset.bm; render(); });
   const bb = document.getElementById('bBln'); if (bb) bb.onchange = () => { UI.bln = +bb.value; render(); };
   const bf = document.getElementById('bFrom'); if (bf) bf.onchange = () => { UI.bFrom = +bf.value; render(); };
   const bt = document.getElementById('bTo'); if (bt) bt.onchange = () => { UI.bTo = +bt.value; render(); }; };
 
+
+/* ======================= TABEL BERKELOMPOK (format laporan kinerja) ======================= */
+function gtable(id, groups, rows, opt={}){
+  const cols = []; groups.forEach(g => g.cols.forEach(c => cols.push({...c, gh:g.g||''})));
+  TBL[id] = {cols: cols.map(c => ({...c, h: (c.gh ? c.gh+' · ' : '')+c.h})), rows: rows.filter(r => !r._head), opt:{}, sort:null, dir:-1, q:''};
+  const cell = (c, r) => { const v = r[c.k]; return `<td class="${c.n?'n':''} ${c.cls||''}">${c.f ? c.f(v, r) : (v===null||v===undefined ? '–' : esc(v))}</td>`; };
+  let h = `<div class="tbar"><span class="cnt">${opt.cap||''}</span><button class="ghost sm" data-xl="${id}">⬇ Unduh Excel</button></div><div class="tw gt-w" style="${opt.h?'max-height:'+opt.h+'px':''}"><table class="gt" id="${id}"><thead><tr>`;
+  h += groups.map(g => `<th colspan="${g.cols.length}" class="gh ${g.g?'':'blank'}" style="--gc:${g.c||'#cbd5e1'}">${esc(g.g||'')}</th>`).join('') + '</tr><tr>';
+  h += cols.map((c,i) => `<th class="${c.n?'n':''} ${i===0?'stick':''}" style="--gc:${c.gc||'transparent'}">${c.h}</th>`).join('') + '</tr></thead><tbody>';
+  h += rows.map(r => r._head ? `<tr class="gt-head"><td colspan="${cols.length}"><span class="gt-hl"><span class="kdot" style="background:${r.c}"></span>${esc(r._head)}</span></td></tr>`
+    : `<tr class="${r._sub?'gt-sub':''} ${r._tot?'tot':''} ${r._dim?'dim':''}">`+cols.map((c,i) => i===0 ? cell(c,r).replace('<td class="','<td class="stick ') : cell(c,r)).join('')+'</tr>').join('');
+  return h + `</tbody></table></div>`;
+}
+const fN = v => v===null||v===undefined||!isFinite(v)||v===0 ? '–' : num(v);
+const fR = v => v===null||v===undefined||!isFinite(v)||v===0 ? '–' : rp(v);
+const fD = v => v===null||v===undefined||!isFinite(v)||v===0 ? '–' : dec(v,2);
+const fM = v => v===null||v===undefined ? '–' : (v<0 ? `<b class="neg">−${rp(-v)}</b>` : `<b class="pos">+${rp(v)}</b>`);
+/* satu baris laporan kinerja untuk satu alat / gabungan alat */
+function kinerjaRow(list, extra={}){
+  const s = f => list.reduce((a,x) => a + (+f(x)||0), 0);
+  const b = k => s(x => x.bk && x.bk[k] ? x.bk[k].b : 0), r = k => s(x => x.bk && x.bk[k] ? x.bk[k].rp : 0);
+  const box = s(aBox), teu = s(aTeu), L = s(x => x.bbL), bbRp = s(x => x.bbRp), jamL = list.filter(x => x.jam!==null && x.jam!==undefined), jam = jamL.length ? s(x => x.jam) : null;
+  const jamBox = jamL.reduce((a,x) => a + aBox(x), 0), jamLt = jamL.reduce((a,x) => a + (x.bbL||0), 0);
+  const rev = s(x => x.rev), sp = s(x => x.sp), lump = s(x => x.lump), biaya = bbRp + sp + lump, utama = list.some(x => x.a.g!=='BANTU');
+  const P_ = list.filter(x => aBox(x) > 0), Lp = P_.reduce((a,x) => a + (x.bbL||0), 0), Rp_ = P_.reduce((a,x) => a + (x.bbRp||0), 0);   // rasio per box/TEUs hanya dari alat yang berproduksi
+  return {b20F:b('20F'), b40F:b('40F'), b20M:b('20M'), b40M:b('40M'), box, teu, jam, L, harga: L ? bbRp/L : null,
+    lJam: jam ? jamLt/jam : null, lBox: box && Lp ? Lp/box : null, lTeu: teu && Lp ? Lp/teu : null, boxJam: jam ? jamBox/jam : null,
+    r20F:r('20F'), r40F:r('40F'), r20M:r('20M'), r40M:r('40M'), rev, bbBox: box && Rp_ ? Rp_/box : null, bb:bbRp, sp, lump, biaya, margin: utama && rev ? rev - biaya : (utama ? -biaya : null), ...extra};
+}
+const KIN_GROUPS = (first) => [
+  {g:'', cols:[first]},
+  {g:'Produktivitas', c:'#3b82f6', cols:[{k:'b20F',h:"20' Full",n:1,f:fN},{k:'b40F',h:"40' Full",n:1,f:fN},{k:'b20M',h:"20' Empty",n:1,f:fN},{k:'b40M',h:"40' Empty",n:1,f:fN},{k:'box',h:'Total box',n:1,f:v=>'<b>'+fN(v)+'</b>'},{k:'teu',h:'Total TEUs',n:1,f:fN}]},
+  {g:'EHM & BBM', c:'#ec4899', cols:[{k:'jam',h:'Jam operasi',n:1,f:fN},{k:'L',h:'BBM (liter)',n:1,f:fN},{k:'harga',h:'Harga/L',n:1,f:v => v ? 'Rp '+num(Math.round(v)) : '–'}]},
+  {g:'Indikator kinerja', c:'#f59e0b', cols:[{k:'lJam',h:'Liter/jam',n:1,f:fD},{k:'lBox',h:'Liter/box',n:1,f:v=>'<b>'+fD(v)+'</b>'},{k:'lTeu',h:'Liter/TEUs',n:1,f:fD},{k:'boxJam',h:'Box/jam',n:1,f:fD}]},
+  {g:'Pendapatan', c:'#10b981', cols:[{k:'r20F',h:"20' Full",n:1,f:fR},{k:'r40F',h:"40' Full",n:1,f:fR},{k:'r20M',h:"20' Empty",n:1,f:fR},{k:'r40M',h:"40' Empty",n:1,f:fR},{k:'rev',h:'Total pendapatan',n:1,f:v=>'<b>'+fR(v)+'</b>'}]},
+  {g:'Biaya BBM, sparepart & perawatan', c:'#ef4444', cols:[{k:'bbBox',h:'BBM/box',n:1,f:v => v ? 'Rp '+num(Math.round(v)) : '–'},{k:'bb',h:'Biaya BBM',n:1,f:fR},{k:'sp',h:'Sparepart',n:1,f:fR},{k:'lump',h:'Lumpsum',n:1,f:fR},{k:'biaya',h:'Total biaya',n:1,f:v=>'<b>'+fR(v)+'</b>'}]},
+  {g:'', cols:[{k:'margin',h:'Pendapatan − biaya',n:1,f:fM}]}];
+function laporanAlat(R, term){
+  const all = Object.values(R.A).filter(x => x.a.t===term && x.a.j!=='GNS' && (x.biaya>0 || x.rev>0 || x.mv>0));
+  const rows = []; const rata = {};
+  ['DERMAGA','LAPANGAN','BANTU'].forEach(g => {
+    const L = all.filter(x => x.a.g===g).sort((a,b) => a.a.k.localeCompare(b.a.k)); if (!L.length) return;
+    rows.push({_head: KELN[g]+' ('+L.length+' alat)', c:KCOL[g]});
+    L.forEach(x => rows.push(kinerjaRow([x], {k:x.a.k, j:JEN[x.a.j]||'', _dim: !aBox(x) && !x.biaya})));
+    const sub = kinerjaRow(L, {k:'Subtotal '+KELN[g], _sub:true}); rows.push(sub); rata[g] = sub;
+  });
+  if (rows.length) rows.push(kinerjaRow(all, {k:'TOTAL '+term, _tot:true}));
+  const first = {k:'k', h:'Alat', f:(v,r) => r._sub||r._tot ? `<b>${esc(v)}</b>` : `<b>${esc(v)}</b><div class="muted" style="font-size:10.5px;font-weight:500">${esc(r.j||'')}</div>`, x:r => r.k};
+  let h = gtable('ber_alat', KIN_GROUPS(first), rows, {h:620, cap:'Laporan kinerja peralatan & pendapatan'});
+  const lb = g => rata[g] && rata[g].lBox ? rata[g].lBox : null, lt = g => rata[g] && rata[g].lTeu ? rata[g].lTeu : null;
+  const G3 = ['DERMAGA','LAPANGAN','BANTU'].filter(g => lb(g));
+  if (G3.length) {
+    const sb = G3.reduce((a,g) => a + lb(g), 0), st = G3.reduce((a,g) => a + (lt(g)||0), 0);
+    h += `<div class="chain"><div class="chain-t">BBM per kontainer — rantai alat <small>rata-rata tertimbang per kelompok (total liter ÷ total box)</small></div><div class="chain-row">`+
+      G3.map((g,i) => `${i?'<span class="chain-plus">+</span>':''}<div class="chain-c" style="--kc:${KCOL[g]}"><span>${esc(KELN[g])}</span><b>${dec(lb(g),2)} L/box</b><em>${lt(g)?dec(lt(g),2)+' L/TEUs':''}</em></div>`).join('')+
+      `<span class="chain-plus">=</span><div class="chain-c tot"><span>1 kontainer dari kapal sampai gate</span><b>${dec(sb,2)} L/box</b><em>${dec(st,2)} L/TEUs</em></div></div></div>`;
+  }
+  return h;
+}
+function laporanTerminal(R, terms, ms){
+  const rows = terms.map(t => {
+    const L = Object.values(R.A).filter(x => x.a.t===t && x.a.j!=='GNS'); const T_ = R.T[t];
+    const chainG = ['DERMAGA','LAPANGAN','BANTU'].map(g => { const l = L.filter(x => x.a.g===g && aBox(x) > 0); const bx = l.reduce((a,x)=>a+aBox(x),0), lt = l.reduce((a,x)=>a+(x.bbL||0),0); return bx && lt ? lt/bx : null; }).filter(v => v);
+    return {t, n:TN[t], dBox:T_.dBox, dTeu:T_.dTeu, gBox:T_.gBox, L:T_.bbL, lBox:T_.lBox, lTeu:T_.lTeu, chain: chainG.length ? chainG.reduce((a,b)=>a+b,0) : null,
+      revD:T_.revD, revL:T_.revL, rev:T_.rev, bb:T_.bbRp, sp:T_.sp, lump:T_.lump, biaya:T_.biaya, perTeu:T_.perTeu, perBox:T_.perBox, margin: T_.rev ? T_.rev - T_.biaya : null, _dim: !(T_.biaya>0 || T_.dBox>0)};
+  });
+  const S = f => rows.reduce((a,r) => a + (r[f]||0), 0); const tb = S('dBox'), tt = S('dTeu'), tl = S('L'), tbi = S('biaya'), trv = S('rev');
+  rows.push({t:'TOTAL', _tot:true, dBox:tb, dTeu:tt, gBox:S('gBox'), L:tl, lBox: tb ? tl/tb : null, lTeu: tt ? tl/tt : null, chain:(() => { const L = Object.values(R.A).filter(x => terms.includes(x.a.t) && x.a.j!=='GNS'); const v = ['DERMAGA','LAPANGAN','BANTU'].map(g => { const l = L.filter(x => x.a.g===g && aBox(x) > 0); const bx = l.reduce((a,x)=>a+aBox(x),0), lt = l.reduce((a,x)=>a+(x.bbL||0),0); return bx && lt ? lt/bx : null; }).filter(v => v); return v.length ? v.reduce((a,b)=>a+b,0) : null; })(), revD:S('revD'), revL:S('revL'), rev:trv, bb:S('bb'), sp:S('sp'), lump:S('lump'), biaya:tbi, perTeu: tt ? tbi/tt : null, perBox: tb ? tbi/tb : null, margin: trv ? trv - tbi : null});
+  const first = {k:'t', h:'Terminal', f:(v,r) => r._tot ? '<b>TOTAL</b>' : `<a href="#" data-bt="${v}" class="bt-link">${UI.berT===v?'▾':'▸'} ${v}</a><div class="muted" style="font-size:10.5px">${esc(r.n)}</div>`, x:r => r.t};
+  const groups = [{g:'', cols:[first]},
+    {g:'Produktivitas', c:'#3b82f6', cols:[{k:'dBox',h:'Box dermaga',n:1,f:v=>'<b>'+fN(v)+'</b>'},{k:'dTeu',h:'TEUs dermaga',n:1,f:fN},{k:'gBox',h:'Box lapangan (gate)',n:1,f:fN}]},
+    {g:'BBM', c:'#ec4899', cols:[{k:'L',h:'Liter',n:1,f:fN},{k:'lBox',h:'L/box',n:1,f:fD},{k:'lTeu',h:'L/TEUs',n:1,f:fD},{k:'chain',h:'L/box rantai alat',n:1,f:v=>'<b>'+fD(v)+'</b>'}]},
+    {g:'Pendapatan', c:'#10b981', cols:[{k:'revD',h:'Stevedoring',n:1,f:fR},{k:'revL',h:'Lift on/off',n:1,f:fR},{k:'rev',h:'Total',n:1,f:v=>'<b>'+fR(v)+'</b>'}]},
+    {g:'Biaya', c:'#ef4444', cols:[{k:'bb',h:'BBM',n:1,f:fR},{k:'sp',h:'Sparepart',n:1,f:fR},{k:'lump',h:'Lumpsum',n:1,f:fR},{k:'biaya',h:'Total',n:1,f:v=>'<b>'+fR(v)+'</b>'},{k:'perTeu',h:'Biaya/TEUs',n:1,f:fR},{k:'perBox',h:'Biaya/box',n:1,f:fR}]},
+    {g:'', cols:[{k:'margin',h:'Pendapatan − biaya',n:1,f:fM}]}];
+  return gtable('ber_term2', groups, rows, {cap:'Klik nama terminal untuk laporan per alat'});
+}
+
+/* ======================= BERANDA DIREKSI: helper ======================= */
+function prevMonths(ms){ const n = ms.length, p = ms.map(m => m - n); return p[0] >= 1 ? p : null; }
+function spark(vals, color){
+  const v = vals.map(x => x===null||x===undefined||isNaN(x) ? null : +x); const ok = v.filter(x => x!==null); if (ok.length < 2) return '';
+  const W = 120, H = 34, mn = Math.min(...ok), mx = Math.max(...ok), rg = (mx-mn) || 1;
+  const pts = v.map((x,i) => x===null ? null : [4 + i*(W-8)/(v.length-1), 4 + (H-8)*(1-(x-mn)/rg)]);
+  const d = pts.filter(Boolean).map((p,i) => (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' '); const last = pts.filter(Boolean).at(-1);
+  const area = d + ` L${last[0].toFixed(1)} ${H-2} L${pts.find(Boolean)[0].toFixed(1)} ${H-2} Z`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="spark"><path d="${area}" fill="${color}" opacity=".10"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0]}" cy="${last[1]}" r="3" fill="${color}"/></svg>`;
+}
+function dirHero(terms, ms, R){
+  const tot = R.tot; const pm = prevMonths(ms); const P0 = pm ? calcMulti(terms, pm).tot : null;
+  const end = ms.at(-1), sm = MONTHS.filter(m => m <= end && m > end - 6);
+  const ada = m => ['pr','sp','bb'].some(kd => (DATA[kd]||[]).some(r => r.bln===m && terms.includes(r.t)));
+  const ST_ = sm.map(m => ada(m) ? calc(terms, m).tot : null);
+  const items = [
+    {l:'Pendapatan', v:t => t.rev, f:rp, good:1, c:'#10b981', sub:t => `Dermaga ${rp(t.revD)} · Lapangan ${rp(t.revL)}`},
+    {l:'Total biaya alat', v:t => t.biaya, f:rp, good:-1, c:'#ef4444', sub:t => `Sparepart ${rp(t.sp)} · BBM ${rp(t.bbRp)} · Lumpsum ${rp(t.lump)}`},
+    {l:'Pendapatan − biaya', v:t => t.rev - t.biaya, f:v => (v<0?'−':'')+rp(Math.abs(v)), good:1, c:'#0ea5a4', sub:t => t.rev ? `biaya = ${pct(t.biaya/t.rev)} dari pendapatan` : ''},
+    {l:'Biaya per TEUs', v:t => t.perTeuProd, f:rp, good:-1, c:'#6366f1', sub:t => t.perBoxProd ? `per box ${rp(t.perBoxProd)}` : ''},
+    {l:'BBM liter per TEUs', v:t => t.lTeu, f:v => dec(v,2)+' L', good:-1, c:'#ec4899', sub:t => `${num(t.bbL)} L untuk ${num(t.dTeu)} TEUs`},
+    {l:'BBM liter per box', v:t => t.lBox, f:v => dec(v,2)+' L', good:-1, c:'#f59e0b', sub:t => `${num(t.dBox)} box dermaga`}];
+  const src = mm => { const o = {}; ['pr','sp','bb'].forEach(kd => o[kd] = (DATA[kd]||[]).some(r => mm.includes(r.bln) && terms.includes(r.t))); return o; };
+  const sc = src(ms), sp0 = pm ? src(pm) : null, SRCN = {pr:'Produksi', sp:'Sparepart', bb:'BBM'};
+  const need = {Pendapatan:['pr'], 'Total biaya alat':['sp','bb'], 'Pendapatan − biaya':['pr','sp','bb'], 'Biaya per TEUs':['pr','sp','bb'], 'BBM liter per TEUs':['pr','bb'], 'BBM liter per box':['pr','bb']};
+  const pmTxt = pm ? (pm.length===1 ? BLN[pm[0]-1] : `${BLN[pm[0]-1]}–${BLN[pm.at(-1)-1]}`) : '';
+  return `<div class="hero">`+items.map(it => {
+    const nd = need[it.l], miss = nd.filter(k => !sc[k]), missP = sp0 ? nd.filter(k => !sp0[k]) : [];
+    let v = it.v(tot), p = P0 ? it.v(P0) : null; let dl = '';
+    if (it.l.startsWith('BBM liter') && !sc.bb) v = null;
+    if (miss.length) dl = `<span class="delta bad" style="background:#fff4e0;color:#b45309">⚠ ${miss.map(k=>SRCN[k]).join(', ')} belum di-upload</span>`;
+    else if (missP.length) dl = `<span class="muted" style="font-size:11px">pembanding ${pmTxt} belum lengkap (${missP.map(k=>SRCN[k]).join(', ')})</span>`;
+    else if (v!==null && v!==undefined && p!==null && p!==undefined && p!==0 && !isNaN(v) && !isNaN(p)) { const ch = (v-p)/Math.abs(p); const up = ch > 0; const good = (up ? 1 : -1) * it.good > 0; dl = `<span class="delta ${Math.abs(ch)<0.005?'flat':good?'good':'bad'}">${Math.abs(ch)<0.005?'■':up?'▲':'▼'} ${dec(Math.abs(ch)*100,1)}%</span><span class="muted" style="font-size:11px"> vs ${pmTxt}</span>`; }
+    else dl = `<span class="muted" style="font-size:11px">${pm ? 'belum ada pembanding' : ''}</span>`;
+    return `<div class="card hk" style="--hc:${it.c}"><div class="hk-l">${it.l}</div><div class="hk-row"><div class="hk-v">${v===null||v===undefined||isNaN(v) ? '–' : it.f(v)}</div>${spark(ST_.map(t => !t || (it.l.startsWith('BBM liter') && !t.bbL) ? null : it.v(t)), it.c)}</div><div class="hk-d">${dl}</div><div class="hk-s">${it.sub(tot)}</div></div>`;
+  }).join('')+`</div><div class="muted" style="font-size:11px;margin:-4px 0 12px">Garis kecil = tren ${sm.length} bulan terakhir (${BLN[sm[0]-1]}–${BLN[end-1]}). ▲▼ hijau = membaik, merah = memburuk.</div>`;
+}
+/* ukuran produksi per alat sesuai kelompok */
+const aBox = x => x.a.g==='DERMAGA' ? x.dBox : x.a.g==='LAPANGAN' ? x.gBox : x.mv;
+const aTeu = x => x.a.g==='DERMAGA' ? x.dTeu : x.a.g==='LAPANGAN' ? x.gTeu : (x.mvTeu||0);
+function jenisAvg(list, num_, den){ const g = {}; list.forEach(x => { const o = g[x.a.t+'|'+x.a.j] = g[x.a.t+'|'+x.a.j] || {n:0, d:0, c:0}; const d = den(x); if (d>0 && num_(x)>0) { o.n += num_(x); o.d += d; o.c++; } }); return g; }
+function attentionCard(terms, ms, R){
+  const A = Object.values(R.A).filter(x => x.a.j!=='GNS'); const items = [];
+  const pm = prevMonths(ms); const PA = pm ? calcMulti(terms, pm).A : null;
+  // 1. BBM boros dibanding alat sejenis di terminal yang sama
+  const g = jenisAvg(A, x => x.bbL, aBox);
+  A.forEach(x => { const bx = aBox(x); if (bx < 100 || !(x.bbL>0)) return; const o = g[x.a.t+'|'+x.a.j]; if (!o || o.c < 2) return; const avg = o.n/o.d, me = x.bbL/bx;
+    if (me > 1.3*avg) { const hrg = x.bbRp/x.bbL; const lebih = (me-avg)*bx*hrg; items.push({imp:lebih, t:x.a.t, k:x.a.k, tag:'BBM boros', cls:'p-warn', txt:`<b>${x.a.k}</b> pakai ${dec(me,2)} L/box, ${dec(me/avg,1)}× rata-rata ${esc(JEN[x.a.j])} lain (${dec(avg,2)} L/box). Kelebihan ± ${num(Math.round((me-avg)*bx))} L ≈ ${rp(lebih)}.`}); } });
+  // 2. alat utama rugi (biaya > pendapatan)
+  A.forEach(x => { if (x.a.g==='BANTU' || !x.rev || x.biaya <= x.rev) return; items.push({imp:x.biaya-x.rev, t:x.a.t, k:x.a.k, tag:'Biaya > pendapatan', cls:'p-bad', txt:`<b>${x.a.k}</b> biaya ${rp(x.biaya)} melebihi pendapatan ${rp(x.rev)} (−${rp(x.biaya-x.rev)}).`}); });
+  // 3. biaya naik tajam vs periode sebelumnya
+  if (PA) A.forEach(x => { const p = PA[x.a.k]; if (!p || !(p.biaya>0)) return; const d = x.biaya - p.biaya; if (d > 50e6 && d/p.biaya > 0.5) items.push({imp:d, t:x.a.t, k:x.a.k, tag:'Biaya naik', cls:'p-warn', txt:`<b>${x.a.k}</b> biaya naik ${pct(d/p.biaya)} (${rp(p.biaya)} → ${rp(x.biaya)}).`}); });
+  // 4. WO besar
+  const wo = {}; DATA.sp.filter(r => ms.includes(r.bln) && terms.includes(r.t) && r.k).forEach(r => { const key = r.k+'|'+woKey(r); const o = wo[key] = wo[key] || {k:r.k, t:r.t, w:woKey(r), tot:0, rs:[]}; o.tot += r.tot; o.rs.push(r); });
+  Object.values(wo).filter(w => w.tot >= 100e6).forEach(w => items.push({imp:w.tot, t:w.t, k:w.k, tag:'WO besar', cls:'p-info', txt:`<b>${w.k}</b> ${esc(w.w)} senilai ${rp(w.tot)} — ${esc(short40(cleanDesk(w.rs.find(r=>r.desk)?.desk) || w.rs[0].mat))}.`}));
+  items.sort((a,b) => b.imp - a.imp);
+  const row = it => `<div class="att" data-att="${it.t}"><span class="pill ${it.cls}">${it.tag}</span><div>${it.txt}</div><span class="att-go">${it.t} ›</span></div>`;
+  let h = `<div class="card"><h3>Perlu perhatian <small>${berPeriodTxt(ms)} · diurutkan dari dampak Rupiah terbesar</small></h3>`;
+  if (!items.length) return h + `<div class="muted" style="padding:10px 0">Tidak ada temuan menonjol untuk periode ini. 👍</div></div>`;
+  h += items.slice(0,6).map(row).join('');
+  if (items.length > 6) h += `<details><summary class="muted" style="cursor:pointer;font-size:12.5px;margin-top:6px">+ ${items.length-6} temuan lain</summary>${items.slice(6).map(row).join('')}</details>`;
+  return h + `</div>`;
+}
+function alatMonitor(R, ms){
+  const met = UI.amM || 'pb', kel = UI.amK || 'ALL', all = !!UI.amAll;
+  let A = Object.values(R.A).filter(x => x.a.j!=='GNS' && (x.biaya>0 || x.rev>0 || x.mv>0));
+  if (kel!=='ALL') A = A.filter(x => x.a.g===kel);
+  const M = {
+    pb:   {n:'Pendapatan vs biaya', note:'Alat utama saja (alat bantu tidak punya pendapatan). Hijau = pendapatan, merah = biaya.'},
+    biaya:{n:'Biaya per alat', v:x => x.biaya, f:rp, note:'Sparepart + BBM + Lumpsum SLA.'},
+    bteu: {n:'Biaya per TEUs', v:x => aTeu(x) ? x.biaya/aTeu(x) : null, f:rp, avg:[x => x.biaya, aTeu], note:'Biaya alat ÷ TEUs yang dikerjakan alat itu.'},
+    lteu: {n:'Liter BBM per TEUs', v:x => aTeu(x) && x.bbL ? x.bbL/aTeu(x) : null, f:v => dec(v,2)+' L', avg:[x => x.bbL, aTeu], note:'Liter BBM alat ÷ TEUs yang dikerjakan alat itu.'},
+    lbox: {n:'Liter BBM per box', v:x => aBox(x) && x.bbL ? x.bbL/aBox(x) : null, f:v => dec(v,2)+' L', avg:[x => x.bbL, aBox], note:'Liter BBM alat ÷ box yang dikerjakan alat itu.'}};
+  const m = M[met];
+  let h = `<div class="card"><div class="am-head"><h3 style="margin:0">Monitoring per alat <small>${berPeriodTxt(ms)} · ${scopeTxt()}</small></h3>
+    <div class="seg">${Object.entries(M).map(([k,o]) => `<button class="${met===k?'on':''}" data-am="${k}">${o.n}</button>`).join('')}</div></div>
+    <div class="seg sm2" style="margin:8px 0 4px">${[['ALL','Semua kelompok'],['DERMAGA',KELN.DERMAGA],['LAPANGAN',KELN.LAPANGAN],['BANTU',KELN.BANTU]].map(([k,n]) => `<button class="${kel===k?'on':''}" data-amk="${k}">${n}</button>`).join('')}</div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">${m.note}${m.avg?' Garis hitam = rata-rata alat sejenis di terminal yang sama; batang merah = lebih dari 1,25× rata-rata.':''}</div>`;
+  let list, body = '';
+  if (met==='pb') {
+    list = A.filter(x => x.a.g!=='BANTU' && (x.rev>0 || x.biaya>0)).sort((a,b) => (b.rev-b.biaya) - (a.rev-a.biaya));
+    const mx = Math.max(1, ...list.map(x => Math.max(x.rev, x.biaya)));
+    const show = all ? list : list.slice(0,15);
+    body = show.map(x => { const d = x.rev - x.biaya; return `<div class="am-row"><div class="am-lab"><span class="kdot" style="background:${KCOL[x.a.g]}"></span><b>${x.a.k}</b><span>${esc(JEN[x.a.j]||'')}</span></div>
+      <div class="am-bars"><div class="am-b"><span style="width:${x.rev/mx*100}%;background:#10b981"></span><em>${x.rev?rp(x.rev):'–'}</em></div><div class="am-b"><span style="width:${x.biaya/mx*100}%;background:#f87171"></span><em>${rp(x.biaya)}</em></div></div>
+      <div class="am-val ${d<0?'neg':'pos'}">${d<0?'−':'+'}${rp(Math.abs(d))}</div></div>`; }).join('');
+    if (list.length > 15) body += `<button class="ghost sm" data-amall="1" style="margin-top:8px">${all?'Tampilkan 15 teratas':'Tampilkan semua '+list.length+' alat'}</button>`;
+  } else {
+    const gA = m.avg ? jenisAvg(A, m.avg[0], m.avg[1]) : null;
+    list = A.map(x => ({x, v:m.v(x)})).filter(o => o.v!==null && o.v>0).sort((a,b) => b.v - a.v);
+    const mx = Math.max(1e-9, ...list.map(o => o.v));
+    const show = all ? list : list.slice(0,15);
+    body = show.map(({x,v}) => { const o = gA && gA[x.a.t+'|'+x.a.j]; const avg = o && o.c>=2 ? o.n/o.d : null; const hi = avg && v > 1.25*avg;
+      return `<div class="am-row"><div class="am-lab"><span class="kdot" style="background:${KCOL[x.a.g]}"></span><b>${x.a.k}</b><span>${esc(JEN[x.a.j]||'')}</span></div>
+      <div class="am-bars"><div class="am-b one"><span style="width:${v/mx*100}%;background:${hi?'#ef4444':KCOL[x.a.g]}"></span>${avg?`<i style="left:${Math.min(avg/mx,1)*100}%" title="Rata-rata ${esc(JEN[x.a.j])}: ${m.f(avg)}"></i>`:''}</div></div>
+      <div class="am-val">${m.f(v)}${avg?`<small>${dec(v/avg,1)}× rata-rata</small>`:''}</div></div>`; }).join('');
+    if (list.length > 15) body += `<button class="ghost sm" data-amall="1" style="margin-top:8px">${all?'Tampilkan 15 teratas':'Tampilkan semua '+list.length+' alat'}</button>`;
+  }
+  if (!list.length) body = '<div class="muted" style="padding:10px 0">Belum ada data untuk pilihan ini.</div>';
+  return h + body + `<div class="legend" style="margin-top:10px">${['DERMAGA','LAPANGAN','BANTU'].map(g => `<span><i style="background:${KCOL[g]}"></i>${esc(KELN[g])}</span>`).join('')}</div></div>`;
+}
 
 /* ======================= JUSTIFIKASI BIAYA (3 alat termahal) ======================= */
 const RE_REPAIR = /JASA|REPAIR|PERBAIKAN|OVERHA?OUL|FABRIKASI|REKONDISI|REWINDING|SERVICE ENGINE|BONGKAR PASANG/i;
@@ -679,17 +895,17 @@ function justifyCard(R, terms, ms){
     const x = j.x; const bar = (n,v,c) => v>0 ? `<span title="${n}" style="display:inline-block;height:8px;width:${Math.max(2,v/x.biaya*100)}%;background:${c}"></span>` : '';
     h += `<details style="border-bottom:1px solid var(--line);padding:9px 0"><summary style="cursor:pointer;list-style:none">
       <div style="display:flex;gap:8px;align-items:baseline"><b style="font-size:14px">${i+1}. ${esc(j.k)}</b><span class="muted">${esc(JEN[x.a.j])}</span><span style="margin-left:auto;font-weight:700">${rp(x.biaya)}</span></div>
-      <div style="display:flex;border-radius:4px;overflow:hidden;margin:5px 0 4px;background:#eef1f5">${bar('Sparepart',x.sp,'var(--c3)')}${bar('BBM',x.bbRp,'var(--c2)')}${bar('Lumpsum',x.lump,'var(--c1)')}</div>
+      <div style="display:flex;border-radius:4px;overflow:hidden;margin:5px 0 4px;background:#eef1f5">${bar('Sparepart',x.sp,'#6366f1')}${bar('BBM',x.bbRp,'#ec4899')}${bar('Lumpsum',x.lump,'#64748b')}</div>
       <div class="muted" style="font-size:12.5px">${esc(j.short)}</div></summary>
       <div style="padding:8px 0 2px 4px;font-size:13px;line-height:1.55">
-        ${x.bbRp>0?`<div><span style="color:var(--c2);font-weight:700">● BBM ${rp(x.bbRp)}</span> <span class="muted">(${pct(x.bbRp/x.biaya)})</span> — ${esc(j.bbmWhy)}.</div>`:''}
-        ${x.sp>0?`<div style="margin-top:4px"><span style="color:var(--c3);font-weight:700">● Sparepart ${rp(x.sp)}</span> <span class="muted">(${pct(x.sp/x.biaya)})</span> — 3 WO dengan biaya terbesar (total semua part dalam satu WO):</div>
+        ${x.bbRp>0?`<div><span style="color:#ec4899;font-weight:700">● BBM ${rp(x.bbRp)}</span> <span class="muted">(${pct(x.bbRp/x.biaya)})</span> — ${esc(j.bbmWhy)}.</div>`:''}
+        ${x.sp>0?`<div style="margin-top:4px"><span style="color:#6366f1;font-weight:700">● Sparepart ${rp(x.sp)}</span> <span class="muted">(${pct(x.sp/x.biaya)})</span> — 3 WO dengan biaya terbesar (total semua part dalam satu WO):</div>
           <ol style="margin:2px 0 0 4px;padding-left:18px">${j.wos.slice(0,3).map(w => `<li><b>${esc(w.w)}</b> — <b>${rp(w.tot)}</b> <span class="muted">· ${w.rs.length} item part · ${w.type.toLowerCase()}${w.tgl?' · '+esc(w.tgl):''}</span><div class="muted" style="font-size:12.5px">${esc(w.desk.slice(0,80))}</div></li>`).join('')}</ol>
           ${j.wos.length>3?`<div class="muted" style="font-size:12px;margin-left:4px">+ ${j.wos.length-3} WO lain ${rp(x.sp - j.wos.slice(0,3).reduce((s,w)=>s+w.tot,0))}</div>`:''}`:''}
-        ${x.lump>0?`<div style="margin-top:4px"><span style="color:var(--c1);font-weight:700">● Lumpsum SLA ${rp(x.lump)}</span> <span class="muted">(${pct(x.lump/x.biaya)})</span> — availability ${pct(x.av)}.</div>`:''}
+        ${x.lump>0?`<div style="margin-top:4px"><span style="color:#64748b;font-weight:700">● Lumpsum SLA ${rp(x.lump)}</span> <span class="muted">(${pct(x.lump/x.biaya)})</span> — availability ${pct(x.av)}.</div>`:''}
       </div></details>`;
   });
-  return h + `<div class="legend"><span><i style="background:var(--c3)"></i>Sparepart</span><span><i style="background:var(--c2)"></i>BBM</span><span><i style="background:var(--c1)"></i>Lumpsum SLA</span></div></div></div>`;
+  return h + `<div class="legend"><span><i style="background:#6366f1"></i>Sparepart</span><span><i style="background:#ec4899"></i>BBM</span><span><i style="background:#64748b"></i>Lumpsum SLA</span></div></div></div>`;
 }
 
 /* ---------- panel total biaya + donut ---------- */
@@ -743,16 +959,7 @@ function alatDetail(R, term, ms){
   const sum = f => rs => rs.reduce((s,r)=>s+(r[f]||0),0);
   let h = `<div style="margin-top:14px;border-top:2px solid var(--teal);padding-top:12px"><h3 style="margin:0 0 8px">Biaya Detail per alat · ${esc(term)} · ${esc(TN[term])} <small>${berPeriodTxt(ms)}</small></h3>`;
   h += biayaPanel(kg, rows);
-  const dsh = v => v ? rp(v) : '–', dl = v => v ? dec(v,2) : '–';
-  h += table('ber_alat',[
-    {k:'k',h:'Kode alat',f:(v,r)=>`<span style="display:inline-block;width:4px;height:14px;border-radius:2px;background:${KCOL[r.gk]};vertical-align:-2px;margin-right:7px"></span><b>${esc(v)}</b>`,x:r=>r.k},
-    {k:'box',h:'Box',n:1,f:v=>v?num(v):'–',x:r=>r.box},{k:'teu',h:'TEUs',n:1,f:v=>v?num(v):'–',x:r=>r.teu},{k:'rev',h:'Pendapatan',n:1,f:dsh,x:r=>r.rev},
-    {k:'sp',h:'Sparepart',n:1,f:rp,x:r=>r.sp},{k:'bb',h:'BBM',n:1,f:rp,x:r=>r.bb},{k:'lump',h:'Lumpsum SLA',n:1,f:rp,x:r=>r.lump},
-    {k:'biaya',h:'Total biaya',n:1,f:v=>'<b>'+rp(v)+'</b>',x:r=>r.biaya},
-    {k:'perTeu',h:'Biaya/TEUs',n:1,f:dsh,x:r=>r.perTeu},{k:'perBox',h:'Biaya/box',n:1,f:dsh,x:r=>r.perBox},{k:'lTeu',h:'L/TEUs',n:1,f:dl,x:r=>r.lTeu},{k:'lBox',h:'L/box',n:1,f:dl,x:r=>r.lBox},
-    {k:'margin',h:'Pendapatan − biaya',n:1,f:v=>v===null||v===undefined?'–':(v<0?pill(rp(v),'p-bad'):rp(v)),x:r=>r.margin}],
-    rows,{sort:'ord',dir:1,h:520,total:rs=>({rev:sum('rev')(rs),sp:sum('sp')(rs),bb:sum('bb')(rs),lump:sum('lump')(rs),biaya:sum('biaya')(rs),margin:sum('rev')(rs)-sum('biaya')(rs)})});
-  h += `<div class="legend" style="margin-top:6px">${['DERMAGA','LAPANGAN','BANTU'].map(g => `<span><i style="background:${KCOL[g]}"></i>${esc(KELN[g])}</span>`).join('')}</div>`;
+  h += laporanAlat(R, term);
   const un = R.T[term]; const extra = (un.spUn||0); const gen = un.genRp||0;
   h += `<div class="muted" style="font-size:12px;margin-top:6px">Box &amp; TEUs: alat utama dermaga dari Loading + Discharging, alat utama lapangan dari Gate In + Gate Out, alat bantu dari semua gerakan. Pendapatan hanya pada alat utama; alat bantu tidak punya pendapatan langsung.${gen?` Genset ${rp(gen)} dipisahkan.`:''}${extra?` Sparepart tanpa alat (antrian pemetaan) ${rp(extra)} tidak masuk tabel ini tetapi tetap dihitung di total terminal.`:''}</div></div>`;
   return h;
