@@ -667,7 +667,7 @@ function justify(R, terms, ms){
       else if (lMe) bbmWhy = `wajar: ${dec(lMe,2)} L/${unit} (rata-rata sejenis ${dec(lAv,2)})`;
       else bbmWhy = `${num(x.bbL)} L tanpa data produksi`;
     }
-    const short = comp.filter(c => c[1]>0).slice(0,2).map(([n,v]) => n==='BBM' ? `BBM ${pct(v/x.biaya)} (${bbmWhy.split(':')[0]})` : n==='Sparepart' ? `Sparepart ${pct(v/x.biaya)}${wos[0]?` (terbesar: ${short40(wos[0].desk)})`:''}` : `Lumpsum ${pct(v/x.biaya)}`).join(' · ');
+    const short = comp.filter(c => c[1]>0).slice(0,2).map(([n,v]) => n==='BBM' ? `BBM ${pct(v/x.biaya)} (${bbmWhy.split(':')[0]})` : n==='Sparepart' ? `Sparepart ${pct(v/x.biaya)}${wos[0]?` (WO terbesar: ${wos[0].w} ${rp(wos[0].tot)})`:''}` : `Lumpsum ${pct(v/x.biaya)}`).join(' · ');
     return {x, k, comp, wos, byType, why, lead, prod, prodRank, peers, woMe, woAvg, perUnit, perUnitAvg, jamBD:x.bd, bbmWhy, short, unit};
   });
 }
@@ -683,8 +683,8 @@ function justifyCard(R, terms, ms){
       <div class="muted" style="font-size:12.5px">${esc(j.short)}</div></summary>
       <div style="padding:8px 0 2px 4px;font-size:13px;line-height:1.55">
         ${x.bbRp>0?`<div><span style="color:var(--c2);font-weight:700">● BBM ${rp(x.bbRp)}</span> <span class="muted">(${pct(x.bbRp/x.biaya)})</span> — ${esc(j.bbmWhy)}.</div>`:''}
-        ${x.sp>0?`<div style="margin-top:4px"><span style="color:var(--c3);font-weight:700">● Sparepart ${rp(x.sp)}</span> <span class="muted">(${pct(x.sp/x.biaya)})</span> — 3 biaya terbesar:</div>
-          <ol style="margin:2px 0 0 4px;padding-left:18px">${j.wos.slice(0,3).map(w => `<li>${esc(w.desk.slice(0,70))} — <b>${rp(w.tot)}</b> <span class="muted">(${w.type.toLowerCase()})</span></li>`).join('')}</ol>
+        ${x.sp>0?`<div style="margin-top:4px"><span style="color:var(--c3);font-weight:700">● Sparepart ${rp(x.sp)}</span> <span class="muted">(${pct(x.sp/x.biaya)})</span> — 3 WO dengan biaya terbesar (total semua part dalam satu WO):</div>
+          <ol style="margin:2px 0 0 4px;padding-left:18px">${j.wos.slice(0,3).map(w => `<li><b>${esc(w.w)}</b> — <b>${rp(w.tot)}</b> <span class="muted">· ${w.rs.length} item part · ${w.type.toLowerCase()}${w.tgl?' · '+esc(w.tgl):''}</span><div class="muted" style="font-size:12.5px">${esc(w.desk.slice(0,80))}</div></li>`).join('')}</ol>
           ${j.wos.length>3?`<div class="muted" style="font-size:12px;margin-left:4px">+ ${j.wos.length-3} WO lain ${rp(x.sp - j.wos.slice(0,3).reduce((s,w)=>s+w.tot,0))}</div>`:''}`:''}
         ${x.lump>0?`<div style="margin-top:4px"><span style="color:var(--c1);font-weight:700">● Lumpsum SLA ${rp(x.lump)}</span> <span class="muted">(${pct(x.lump/x.biaya)})</span> — availability ${pct(x.av)}.</div>`:''}
       </div></details>`;
