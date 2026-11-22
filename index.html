@@ -243,7 +243,7 @@ function rowRev(r, keg){
 function termsSel(){ return UI.fterm==='ALL' ? TERMS.map(t=>t.k) : [UI.fterm]; }
 function calc(terms, bln){
   const A = {};
-  Object.values(ALAT).filter(a => terms.includes(a.t)).forEach(a => A[a.k] = {a, sp:0, spn:0, bbL:0, bbRp:0, lump:lumpsum(a.k,bln), av:avail(a.k,bln), jam:jamOperasi(a.k,bln), bd:jamBD(a.k,bln), mv:0, dBox:0, dTeu:0, gBox:0, gTeu:0, revD:0, revL:0, revMiss:false, unpaid:0});
+  Object.values(ALAT).filter(a => terms.includes(a.t)).forEach(a => A[a.k] = {a, sp:0, spn:0, bbL:0, bbRp:0, lump:lumpsum(a.k,bln), av:avail(a.k,bln), jam:jamOperasi(a.k,bln), bd:jamBD(a.k,bln), mv:0, dBox:0, dTeu:0, gBox:0, gTeu:0, revD:0, revL:0, revMiss:false, unpaid:0, bk:{}});
   const T = {}; terms.forEach(t => T[t] = {sp:0, spUn:0, bbL:0, bbRp:0, genL:0, genRp:0, lump:0, dBox:0, dTeu:0, gBox:0, revD:0, revL:0, prod:false, hasSp:false, hasBb:false, unmapped:0});
   DATA.sp.forEach(r => { if (r.bln!==bln || !T[r.t]) return; T[r.t].hasSp = true; if (r.k && A[r.k]) { A[r.k].sp += r.tot; A[r.k].spn++; } else T[r.t].spUn += r.tot; T[r.t].sp += r.tot; });
   DATA.bb.forEach(r => { if (r.bln!==bln || !T[r.t] || r.status!=='Realisasi Terverifikasi') return; T[r.t].hasBb = true; const rp = r.vol*r.harga;
@@ -251,8 +251,10 @@ function calc(terms, bln){
     if (r.k && A[r.k]) { A[r.k].bbL += r.vol; A[r.k].bbRp += rp; } T[r.t].bbL += r.vol; T[r.t].bbRp += rp; });
   DATA.pr.forEach(r => { if (r.bln!==bln || !T[r.t]) return; T[r.t].prod = true; const x = r.k && A[r.k]; if (!x) { T[r.t].unmapped += r.box; return; }
     x.mv += r.box; const g = x.a.g;
-    if (g==='DERMAGA' && (r.task==='Loading' || r.task==='Discharging')) { x.dBox += r.box; x.dTeu += teus(r); const v = rowRev(r,'STEVEDORING'); if (v===null) x.revMiss = true; else x.revD += v; }
-    else if (g==='LAPANGAN' && isGate(r.task)) { const s = sign(r.task); x.gBox += s*r.box; x.gTeu += s*teus(r); const v = rowRev(r,'LIFT ON/OFF'); if (v===null) x.revMiss = true; else x.revL += s*v; }
+    const addBk = (keg, s) => { const n20 = r.s20, n40 = r.s40 + r.s40h + r.s45; [['20',n20],['40',n40]].forEach(([uk,n]) => { if (!n) return; const key = uk+r.fm; const o = x.bk[key] = x.bk[key] || {b:0, rp:0, tarif: keg ? tarif(r.t, keg, uk, r.fm) : null}; o.b += s*n; o.rp += s*n*(o.tarif||0); }); };
+    if (g==='DERMAGA' && (r.task==='Loading' || r.task==='Discharging')) { x.dBox += r.box; x.dTeu += teus(r); addBk('STEVEDORING', 1); const v = rowRev(r,'STEVEDORING'); if (v===null) x.revMiss = true; else x.revD += v; }
+    else if (g==='BANTU') addBk(null, 1);   // alat bantu: semua gerakan, tanpa rupiah
+    else if (g==='LAPANGAN' && isGate(r.task)) { const s = sign(r.task); x.gBox += s*r.box; x.gTeu += s*teus(r); addBk('LIFT ON/OFF', s); const v = rowRev(r,'LIFT ON/OFF'); if (v===null) x.revMiss = true; else x.revL += s*v; }
   });
   Object.values(A).forEach(x => { const t = T[x.a.t]; t.lump += x.lump; t.dBox += x.dBox; t.dTeu += x.dTeu; t.gBox += x.gBox; t.revD += x.revD; t.revL += x.revL;
     if (x.a.g==='LAPANGAN' && x.mv) x.unpaid = (x.mv - x.gBox)/x.mv;
@@ -731,8 +733,11 @@ function parseUpload(page, aoa, fname){
     const hi = findHeader(aoa, ['EQ(ITV) NO.','TASK TYPE','TOTAL']); if (hi<0) return showParseErr('Format Tonus tidak dikenali (kolom EQ(ITV) No., Task Type, Total tidak ditemukan).');
     const H = aoa[hi].map(NORM); const c = n => H.indexOf(n);
     const bln = bsel==='file' ? UI.bln : +bsel; out.months.add(bln);
+    const cFM = ['FULL/MTY','FULL/EMPTY','F/M','F/E','FM','FULL/MT','FULL / MTY','STATUS FULL/EMPTY','FULL_MTY','FULLMTY','STATUS'].map(c).find(x => x>=0) ?? H.findIndex(h => /FULL|MTY|EMPTY/.test(h));
+    const fmOf = v => { const s = String(v??'').trim().toUpperCase(); return /^(M|E|K)/.test(s) ? 'M' : 'F'; };   // M, MT, MTY, E, EMPTY, KOSONG = Empty
+    if (cFM<0) out.warn.push('Kolom FULL/MTY tidak ditemukan — semua box dianggap FULL, pendapatan bisa terlalu besar. Pastikan kolom Full/Empty ada di file.');
     aoa.slice(hi+1).forEach((r,i) => { if (!r || r[c('EQ(ITV) NO.')]===null) return; const g = n => +r[c(n)]||0;
-      out.rows.push({id:id+'_'+i, src:'TONUS', t, bln, nama:String(r[c('EQ(ITV) NO.')]), type:r[c('EQ(ITV) TYPE')], task:r[c('TASK TYPE')], s20:g("20'"), s40:g("40'"), s45:g("45'"), s40h:g("40'H"), box:g('TOTAL'), fm:String(r[c('FULL/MTY')]||'').trim().toUpperCase().startsWith('M')?'M':'F', op:r[c('USER NAME')], b:id}); });
+      out.rows.push({id:id+'_'+i, src:'TONUS', t, bln, nama:String(r[c('EQ(ITV) NO.')]), type:r[c('EQ(ITV) TYPE')], task:r[c('TASK TYPE')], s20:g("20'"), s40:g("40'"), s45:g("45'"), s40h:g("40'H"), box:g('TOTAL'), fm:cFM>=0 ? fmOf(r[cFM]) : 'F', op:r[c('USER NAME')], b:id}); });
   } else if (s.kind==='sp') {
     // Format SIGAP: mentah (dua kolom "JUMLAH": jumlah barang & total Rp) atau olahan (JUMLAH2, AREA, PERIODE)
     const hi = findHeader(aoa, ['KETERANGAN ALAT','NO WO']); if (hi<0) return showParseErr('Format SIGAP tidak dikenali: kolom KETERANGAN ALAT dan NO WO tidak ditemukan di 15 baris pertama.');
@@ -780,6 +785,7 @@ function parseUpload(page, aoa, fname){
       out.months.add(bln);
       out.rows.push({id:id+'_'+i, src:'P-FUEL', t, bln, ba:r[c('NOMOR')], tgl:ymd(d), nama:String(r[c('ALAT')]), jenis:r[c('JENIS BBM')], vol:+r[c('VOLUME')]||0, harga:cTar>=0 ? (+r[cTar]||0) : 0, status:String(r[c('STATUS')]||'').trim(), b:id}); });
   }
+  if (s.kind==='pr' && out.rows.length) { const fv = {}; out.rows.forEach(r => fv[r.fm] = (fv[r.fm]||0) + r.box); out.warn.push(`Full/Empty terbaca: Full ${num(fv.F||0)} box · Empty ${num(fv.M||0)} box.${!fv.M ? ' ⚠ Tidak ada box Empty — periksa kolom FULL/MTY di file.' : ''}`); }
   if (s.kind==='bb') { const z = out.rows.filter(r => r.status==='Realisasi Terverifikasi' && r.vol>0 && !r.harga).length; if (z) out.warn.push(`${z} baris terverifikasi tanpa tarif — biayanya Rp 0, periksa di Laporan Biaya.`); }
   out.rows.forEach(r => r.k = resolve(r.src, r.t, r.nama));
   const months = [...out.months].sort((a,b)=>a-b);
@@ -819,6 +825,28 @@ async function commitUpload(){
   save(); const kept = saveRows(); rebuildData(); PENDING = null; toast(CLOUD_ON ? 'Data tersimpan di server. Baris dengan nama belum dikenal menunggu di Antrian Pemetaan.' : kept ? 'Data tersimpan. Baris dengan nama belum dikenal menunggu di Antrian Pemetaan.' : 'Data dipakai selama halaman terbuka; file terlalu besar untuk disimpan permanen di browser.'); render();
 }
 
+
+/* ---------- rincian pendapatan per ukuran & Full/Empty (seperti hitungan manual) ---------- */
+function rincianPendapatan(A, terms){
+  const B = ['20F','40F','20M','40M'], BN = {'20F':"20' Full",'40F':"40' Full",'20M':"20' Empty",'40M':"40' Empty"};
+  let h = '';
+  [['DERMAGA','STEVEDORING','Alat utama dermaga — stevedoring (Loading + Discharging)','pr_rinD'],['LAPANGAN','LIFT ON/OFF','Alat utama lapangan — lift on/off (Gate In + Gate Out − Cancel)','pr_rinL'],['BANTU',null,'Alat bantu — semua gerakan, tanpa pendapatan','pr_rinB']].forEach(([g, keg, judul, id]) => {
+    const xs = Object.values(A).filter(x => x.a.g===g && Object.keys(x.bk).length);
+    if (!xs.length) return;
+    const t0 = terms.length===1 ? terms[0] : xs[0].a.t;
+    const tar = Object.fromEntries(B.map(k => [k, keg ? tarif(t0, keg, k.slice(0,2), k[2]) : null]));
+    const rows = xs.map(x => { const o = {k:x.a.k}; let tb = 0, tr = 0; B.forEach(k => { const v = x.bk[k] || {b:0, rp:0}; o['b'+k] = v.b; o['r'+k] = v.rp; tb += v.b; tr += v.rp; }); o.tb = tb; o.tr = tr; return o; }).sort((a,b) => a.k.localeCompare(b.k));
+    const cols = [{k:'k',h:'Kode alat',f:v=>'<b style="white-space:nowrap">'+esc(v)+'</b>'}];
+    B.forEach(k => { cols.push({k:'b'+k, h:BN[k]+' (box)', n:1, f:num}); if (keg) cols.push({k:'r'+k, h:BN[k]+' (Rp)', n:1, f:num}); });
+    cols.push({k:'tb', h: keg ? 'Total box' : 'Total gerakan', n:1, f:v=>'<b>'+num(v)+'</b>'}); if (keg) cols.push({k:'tr', h:'Total pendapatan (Rp)', n:1, f:v=>'<b>'+num(v)+'</b>'});
+    const sum = f => rs => rs.reduce((s,r)=>s+(r[f]||0),0);
+    h += `<div class="card" style="margin-top:12px"><h3>Rincian pendapatan per ukuran & Full/Empty <small>${esc(judul)}</small></h3>
+      <div class="legend" style="margin:0 0 10px">${keg ? B.map(k => `<span class="pill ${tar[k]?'p-info':'p-bad'}">${BN[k]}: ${tar[k]?'Rp '+num(tar[k]):'tarif belum ada'}</span>`).join(' ')+`<span class="muted">tarif ${esc(t0)} · ${esc(keg)} · 40' termasuk 40'H dan 45'</span>` : `<span class="muted">Beban kerja alat bantu (HDT, Kalmar, RST, dll.) per ukuran dan Full/Empty dari semua jenis tugas · 40' termasuk 40'H dan 45' · tidak ada tarif langsung</span>`}</div>`+
+      table(id, cols, rows, {search:false, sort:'k', dir:1, total: rs => Object.fromEntries(['tb','tr',...B.flatMap(k => ['b'+k,'r'+k])].map(f => [f, sum(f)(rs)]))})+`</div>`;
+  });
+  return h;
+}
+
 /* ---------- Produksi ---------- */
 P.produksi = () => {
   let h = tabs([['detail','Detail'],['evaluasi','Evaluasi'],['dashboard','Dashboard'],['upload','Upload']]);
@@ -828,6 +856,7 @@ P.produksi = () => {
   if (!rows.length) return h + `<div class="note">Belum ada data produksi untuk ${scopeTxt()} periode ${periodeTxt()}. Silakan upload di tab Upload.</div>`;
   if (tab==='detail') {
     h += `<div class="grid k4">${kpi('Box dermaga (Loading + Discharging)', num(tot.dBox), num(tot.dTeu)+' TEUs', true)}${kpi('Lapangan dibayar (Gate In + Gate Out − Cancel)', num(tot.gBox)+' box')}${kpi('Pendapatan dermaga', rp(tot.revD))}${kpi('Pendapatan lapangan', rp(tot.revL))}</div>`;
+    h += rincianPendapatan(A, terms);
     h += `<div class="card" style="margin-top:12px"><h3>Produksi per alat <small>${periodeTxt()}</small></h3>`+table('pr_alat',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'mv',h:'Total gerakan',n:1,f:num},{k:'dBox',h:'Box dermaga',n:1,f:num},{k:'dTeu',h:'TEUs dermaga',n:1,f:num},{k:'gBox',h:'Lapangan dibayar',n:1,f:num},{k:'unpaid',h:'% tidak dibayar',n:1,f:pct},{k:'rev',h:'Pendapatan',n:1,f:rp}],rows,{sort:'mv',total:rs=>({mv:rs.reduce((s,r)=>s+r.mv,0),dBox:rs.reduce((s,r)=>s+r.dBox,0),dTeu:rs.reduce((s,r)=>s+r.dTeu,0),gBox:rs.reduce((s,r)=>s+r.gBox,0),rev:rs.reduce((s,r)=>s+r.rev,0)})})+`</div>`;
     const raw = DATA.pr.filter(r => terms.includes(r.t) && r.bln===UI.bln);
     h += `<div class="card" style="margin-top:12px"><h3>Data mentah Tonus</h3>`+table('pr_raw',[{k:'nama',h:'EQ No. (asli)'},{k:'k',h:'Kode baku',f:v=>alatLbl(v)},{k:'type',h:'Type'},{k:'task',h:'Task'},{k:'fm',h:'F/M'},{k:'s20',h:"20'",n:1,f:num},{k:'s40',h:"40'",n:1,f:num},{k:'s40h',h:"40'H",n:1,f:num},{k:'s45',h:"45'",n:1,f:num},{k:'box',h:'Total',n:1,f:num},{k:'op',h:'Operator'}],raw,{h:380})+`</div>`;
@@ -842,7 +871,7 @@ P.produksi = () => {
   }
   return h;
 };
-P.produksi.after = () => { ['pr_alat','pr_raw','pr_eval'].forEach(drawTable); wireUpload('produksi'); };
+P.produksi.after = () => { ['pr_alat','pr_raw','pr_eval','pr_rinD','pr_rinL','pr_rinB'].forEach(drawTable); wireUpload('produksi'); };
 
 /* ---------- Sparepart ---------- */
 P.sparepart = () => {
@@ -1123,7 +1152,7 @@ P.master = () => {
 P.master.after = () => {
   ['ms_alat','ms_alias','ms_log'].forEach(drawTable);
   document.querySelectorAll('[data-ms]').forEach(s => s.onchange = () => { const k = s.dataset.ms; ALAT[k].st = s.value; ST.alatEdit[k] = Object.assign(ST.alatEdit[k]||{}, {st:s.value}); if (CLOUD_ON) cloud.alat(k, {status:s.value}); logc('Ubah status alat', k+' → '+s.value); save(); });
-  document.querySelectorAll('[data-tf]').forEach(i => i.onchange = () => { const t = TARIF().map(x=>({...x})); const r = t[+i.dataset.tf]; logc('Ubah tarif', `${r.t} ${r.keg} ${r.uk}' ${r.fm}: ${num(r.v)} → ${num(+i.value)}`); r.v = +i.value; r.src = 'Diubah Admin Pusat '+new Date().toISOString().slice(0,10); ST.tarif = t; if (CLOUD_ON) cloud.tarif(); save(); });
+  document.querySelectorAll('[data-tf]').forEach(i => i.onchange = () => { const t = TARIF().map(x=>({...x})); const r = t[+i.dataset.tf]; if (+i.value === +r.v) return; if (!(+i.value > 0)) { toast('Isi nilai tarif yang valid.'); i.value = r.v; return; } logc('Ubah tarif', `${r.t} ${r.keg} ${r.uk}' ${r.fm}: ${num(r.v)} → ${num(+i.value)}`); r.v = +i.value; r.src = 'Diubah Admin Pusat '+new Date().toISOString().slice(0,10); ST.tarif = t; if (CLOUD_ON) cloud.tarif(); save(); });
   document.querySelectorAll('[data-td]').forEach(b => b.onclick = () => { const t = TARIF().map(x=>({...x})); const r = t.splice(+b.dataset.td,1)[0]; ST.tarif = t; if (CLOUD_ON) cloud.tarif(); logc('Hapus tarif', `${r.t} ${r.keg} ${r.uk}' ${r.fm}`); save(); render(); });
   const na = document.getElementById('ntAdd'); if (na) na.onclick = () => { const v = +document.getElementById('ntV').value; if (!v) { toast('Isi nilai tarif.'); return; } const t = TARIF().map(x=>({...x})); const g = id => document.getElementById(id).value; const r = {t:g('ntT'), keg:g('ntK'), uk:g('ntU'), fm:g('ntF'), pl:'DOMESTIK', v, src:'Input Admin Pusat '+new Date().toISOString().slice(0,10)}; t.push(r); ST.tarif = t; if (CLOUD_ON) cloud.tarif(); logc('Tambah tarif', `${r.t} ${r.keg} ${r.uk}' ${r.fm} = ${num(v)}`); save(); render(); };
   document.querySelectorAll('[data-fb],[data-ff]').forEach(i => i.onchange = () => { const f = FAKTOR().map(x=>({...x})); if (i.dataset.fb!==undefined) f[+i.dataset.fb].b = +i.value/100; else f[+i.dataset.ff].f = +i.value; ST.faktor = f; if (CLOUD_ON) cloud.faktor(); logc('Ubah faktor SLA', JSON.stringify(f)); save(); });
@@ -1150,7 +1179,7 @@ const cloud = {
     if (Date.now() > this.s.exp - 60000) await this.auth({refresh_token:this.s.rt}, 'refresh_token');
     return this.s.at;
   },
-  logout(){ try { localStorage.removeItem('mka_sb_session'); } catch(e) {} location.hash = ''; location.reload(); },
+  async logout(){ try { await this._tq; } catch(e) {} try { localStorage.removeItem('mka_sb_session'); } catch(e) {} location.hash = ''; location.reload(); },
   async req(path, {method='GET', body, headers={}}={}){
     const at = await this.token();
     const r = await fetch(`${CLOUD.url}/rest/v1/${path}`, {method, headers:{apikey:CLOUD.key, Authorization:'Bearer '+at, 'Content-Type':'application/json', ...headers}, body: body===undefined ? undefined : JSON.stringify(body)});
@@ -1234,7 +1263,16 @@ const cloud = {
   avail(k, bln, v){ this.bg(this.insert('availability', [{kode_alat:k, tahun:YEAR, bulan:bln, terminal:ALAT[k]?.t, nilai:v}], 'kode_alat,tahun,bulan'), 'availability'); },
   anom(id, t, st){ this.bg(this.insert('anomali_status', [{id, terminal:t||null, status:st, oleh:this.profile?.email||''}], 'id'), 'status anomali'); },
   alat(k, f){ this.bg(this.patch('alat', `kode=eq.${this.q(k)}`, f), 'alat'); },
-  tarif(){ this.bg((async () => { await this.del('tarif', 'id=gt.0'); await this.insert('tarif', TARIF().map(r => ({terminal:r.t, kegiatan:r.keg, ukuran:String(r.uk), fm:r.fm, pelayaran:r.pl||'DOMESTIK', tarif:+r.v, sumber:r.src||null}))); })(), 'tarif'); },
+  tarif(){
+    // Aman: tulis tarif baru dulu, baru hapus baris lama. Panggilan beruntun diantrikan agar tidak saling tumpuk.
+    const rows = TARIF().map(r => ({terminal:r.t, kegiatan:r.keg, ukuran:String(r.uk), fm:r.fm, pelayaran:r.pl||'DOMESTIK', tarif:+r.v, sumber:r.src||null}));
+    this._tq = (this._tq || Promise.resolve()).then(async () => {
+      const old = (await this.all('tarif', 'select=id')).map(r => r.id);
+      await this.insert('tarif', rows);
+      for (let i = 0; i < old.length; i += 200) await this.del('tarif', 'id=in.(' + old.slice(i, i+200).join(',') + ')');
+    });
+    this.bg(this._tq, 'tarif'); this._tq = this._tq.catch(() => {});
+  },
   faktor(){ this.bg((async () => { await this.del('faktor_sla', 'id=gt.0'); await this.insert('faktor_sla', FAKTOR().map(r => ({batas:r.b, faktor:r.f}))); })(), 'faktor SLA'); },
   lock(key, on){ const [t,m] = key.split('|'); this.bg(on ? this.insert('kunci_periode', [{terminal:t, tahun:YEAR, bulan:+m, oleh:this.profile?.email||''}], 'terminal,tahun,bulan') : this.del('kunci_periode', `terminal=eq.${this.q(t)}&tahun=eq.${YEAR}&bulan=eq.${+m}`), 'kunci periode'); },
   log(what, detail){ this.bg(this.insert('log_perubahan', [{oleh:this.profile?.email||'', terminal:UI.role==='pusat'?null:UI.rterm, perubahan:what, detail:String(detail||'')}]), 'log'); },
