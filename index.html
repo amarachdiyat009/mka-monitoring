@@ -232,8 +232,8 @@ function lumpsum(k, bln){ const a = ALAT[k]; if (!a || !a.h) return 0; const f =
 function tarif(t, keg, uk, fm){ const x = TARIF().find(r => r.t===t && r.keg===keg && r.uk===uk && r.fm===fm && r.pl==='DOMESTIK'); return x ? +x.v : null; }
 
 /* ======================= CALC ======================= */
-const isGate = task => task==='Gate In' || task==='Gate Out' || task==='Gate Out Cancel before Gate Out';
-const sign = task => task==='Gate Out Cancel before Gate Out' ? -1 : 1;
+const isGate = task => task==='Gate In' || task==='Gate Out';   // produksi lapangan: hanya Gate In + Gate Out (tugas lain tidak dihitung)
+const sign = () => 1;
 function teus(r){ return r.s20 + 2*(r.s40 + r.s40h + r.s45); }   // 20' = 1 TEUs; 40', 40'H, 45' = 2 TEUs
 function rowRev(r, keg){
   const t20 = tarif(r.t, keg, '20', r.fm), t40 = tarif(r.t, keg, '40', r.fm);
@@ -682,7 +682,7 @@ function alatDetail(R, term, ms){
     {k:'margin',h:'Pendapatan − biaya',n:1,f:v=>v===null||v===undefined?'–':(v<0?pill(rp(v),'p-bad'):rp(v)),x:r=>r.margin}],
     rows,{sort:'ord',dir:1,h:520,total:rs=>({rev:sum('rev')(rs),sp:sum('sp')(rs),bb:sum('bb')(rs),lump:sum('lump')(rs),biaya:sum('biaya')(rs),margin:sum('rev')(rs)-sum('biaya')(rs)})});
   const un = R.T[term]; const extra = (un.spUn||0); const gen = un.genRp||0;
-  h += `<div class="muted" style="font-size:12px;margin-top:6px">Pendapatan hanya pada alat utama: dermaga dari Loading + Discharging, lapangan dari Gate In + Gate Out − Cancel. Alat bantu tidak punya pendapatan langsung.${gen?` Genset ${rp(gen)} dipisahkan.`:''}${extra?` Sparepart tanpa alat (antrian pemetaan) ${rp(extra)} tidak masuk tabel ini tetapi tetap dihitung di total terminal.`:''}</div></div>`;
+  h += `<div class="muted" style="font-size:12px;margin-top:6px">Pendapatan hanya pada alat utama: dermaga dari Loading + Discharging, lapangan dari Gate In + Gate Out. Alat bantu tidak punya pendapatan langsung.${gen?` Genset ${rp(gen)} dipisahkan.`:''}${extra?` Sparepart tanpa alat (antrian pemetaan) ${rp(extra)} tidak masuk tabel ini tetapi tetap dihitung di total terminal.`:''}</div></div>`;
   return h;
 }
 
@@ -830,7 +830,7 @@ async function commitUpload(){
 function rincianPendapatan(A, terms){
   const B = ['20F','40F','20M','40M'], BN = {'20F':"20' Full",'40F':"40' Full",'20M':"20' Empty",'40M':"40' Empty"};
   let h = '';
-  [['DERMAGA','STEVEDORING','Alat utama dermaga — stevedoring (Loading + Discharging)','pr_rinD'],['LAPANGAN','LIFT ON/OFF','Alat utama lapangan — lift on/off (Gate In + Gate Out − Cancel)','pr_rinL'],['BANTU',null,'Alat bantu — semua gerakan, tanpa pendapatan','pr_rinB']].forEach(([g, keg, judul, id]) => {
+  [['DERMAGA','STEVEDORING','Alat utama dermaga — stevedoring (Loading + Discharging)','pr_rinD'],['LAPANGAN','LIFT ON/OFF','Alat utama lapangan — lift on/off','pr_rinL'],['BANTU',null,'Alat bantu — semua gerakan, tanpa pendapatan','pr_rinB']].forEach(([g, keg, judul, id]) => {
     const xs = Object.values(A).filter(x => x.a.g===g && Object.keys(x.bk).length);
     if (!xs.length) return;
     const t0 = terms.length===1 ? terms[0] : xs[0].a.t;
@@ -855,7 +855,7 @@ P.produksi = () => {
   const rows = Object.values(A).filter(x => x.mv>0).map(x => ({k:x.a.k, t:x.a.t, g:KELN[x.a.g], j:x.a.j, mv:x.mv, dBox:x.dBox, dTeu:x.dTeu, gBox:x.gBox, unpaid:x.a.g==='LAPANGAN'?x.unpaid:null, rev:x.rev, jam:x.jam, bph:x.jam?(x.a.g==='DERMAGA'?x.dBox:x.mv)/x.jam:null, rpj: x.jam? x.rev/x.jam : null}));
   if (!rows.length) return h + `<div class="note">Belum ada data produksi untuk ${scopeTxt()} periode ${periodeTxt()}. Silakan upload di tab Upload.</div>`;
   if (tab==='detail') {
-    h += `<div class="grid k4">${kpi('Box dermaga (Loading + Discharging)', num(tot.dBox), num(tot.dTeu)+' TEUs', true)}${kpi('Lapangan dibayar (Gate In + Gate Out − Cancel)', num(tot.gBox)+' box')}${kpi('Pendapatan dermaga', rp(tot.revD))}${kpi('Pendapatan lapangan', rp(tot.revL))}</div>`;
+    h += `<div class="grid k4">${kpi('Box dermaga (Loading + Discharging)', num(tot.dBox), num(tot.dTeu)+' TEUs', true)}${kpi('Box lapangan (Gate In + Gate Out)', num(tot.gBox)+' box')}${kpi('Pendapatan dermaga', rp(tot.revD))}${kpi('Pendapatan lapangan', rp(tot.revL))}</div>`;
     h += rincianPendapatan(A, terms);
     h += `<div class="card" style="margin-top:12px"><h3>Produksi per alat <small>${periodeTxt()}</small></h3>`+table('pr_alat',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'mv',h:'Total gerakan',n:1,f:num},{k:'dBox',h:'Box dermaga',n:1,f:num},{k:'dTeu',h:'TEUs dermaga',n:1,f:num},{k:'gBox',h:'Lapangan dibayar',n:1,f:num},{k:'unpaid',h:'% tidak dibayar',n:1,f:pct},{k:'rev',h:'Pendapatan',n:1,f:rp}],rows,{sort:'mv',total:rs=>({mv:rs.reduce((s,r)=>s+r.mv,0),dBox:rs.reduce((s,r)=>s+r.dBox,0),dTeu:rs.reduce((s,r)=>s+r.dTeu,0),gBox:rs.reduce((s,r)=>s+r.gBox,0),rev:rs.reduce((s,r)=>s+r.rev,0)})})+`</div>`;
     const raw = DATA.pr.filter(r => terms.includes(r.t) && r.bln===UI.bln);
