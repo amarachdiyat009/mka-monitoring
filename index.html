@@ -194,6 +194,16 @@ table.gt td.n,table.gt th.n{text-align:right}
 .spt-meta{font-size:11.5px;color:#64748b;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spt-v{text-align:right}.spt-v b{display:block;font-size:15px}.spt-v span{font-size:11.5px;color:#94a3b8}
 @media(max-width:1000px){.spt-wrap{grid-template-columns:1fr}.spt-row{grid-template-columns:120px 1fr 100px}}
+
+.mdl-bg{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px}
+.mdl{background:#fff;border-radius:16px;width:min(760px,100%);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(15,23,42,.3)}
+.mdl-h{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);font-size:15px}.mdl-x{text-decoration:none;color:#64748b;font-size:16px}
+.mdl-b{padding:16px 18px;overflow:auto}.mdl-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+.fgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px}.fgrid label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:#475569}
+.fgrid label.w2{grid-column:span 2}.fgrid input,.fgrid select{width:100%}
+.kprev{margin-top:12px;padding:10px 12px;background:#f1f5f9;border-radius:10px;font-size:13px}
+label.btn{display:inline-flex;align-items:center;padding:7px 12px;border-radius:10px;border:1px solid var(--line);font-size:13px;font-weight:600;background:#fff}
+@media(max-width:700px){.fgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -261,7 +271,7 @@ const LOCALCFG = (() => { try { return JSON.parse(localStorage.getItem('mka_cfg'
 const CLOUD = {url:String((window.MKA_CONFIG||{}).SUPABASE_URL || LOCALCFG.url || '').trim().replace(/\/+$/,''), key:String((window.MKA_CONFIG||{}).SUPABASE_ANON_KEY || LOCALCFG.key || '').trim()};
 const CLOUD_ON = /^https?:\/\//.test(CLOUD.url) && CLOUD.key.length > 20;
 const LSKEY = SEED.mode==='kosong' ? 'mka_proto_kosong_v1' : 'mka_proto_v1';
-let ST = {aliasAdd:[], alatEdit:{}, tarif:null, faktor:null, ehm:{}, ehmBulan:{}, avail:{}, anom:{}, locks:{}, log:[], rowMap:{}, uploads:[]};
+let ST = {aliasAdd:[], aliasDel:[], alatNew:[], alatEdit:{}, tarif:null, faktor:null, ehm:{}, ehmBulan:{}, avail:{}, anom:{}, locks:{}, log:[], rowMap:{}, uploads:[]};
 if (!CLOUD_ON) try { const s = localStorage.getItem(LSKEY); if (s) ST = Object.assign(ST, JSON.parse(s)); } catch(e) {}
 ST.ehmBulan = ST.ehmBulan || {};
 let UPROWS = {sp:[], pr:[], bb:[]};       // baris hasil upload; disimpan di browser bila muat
@@ -275,18 +285,53 @@ const UI = {role:'pusat', rterm:'JKT1', fterm:'ALL', bln:9, page:'beranda', tab:
 /* ---------- master ---------- */
 const ALAT = {};
 SEED.alat.forEach(a => ALAT[a.k] = Object.assign({}, a));
+(ST.alatNew||[]).forEach(a => { if (!ALAT[a.k]) ALAT[a.k] = Object.assign({}, a); });
 Object.entries(ST.alatEdit).forEach(([k,v]) => { if (ALAT[k]) Object.assign(ALAT[k], v); });
 const JEN = SEED.jen;
 const NORM = s => String(s||'').toUpperCase().replace(/\s+/g,' ').trim();
 let ALIAS = [];
 function buildAlias(){
-  ALIAS = SEED.alias.map(a => ({...a, st:a.st||'disetujui'})).concat(ST.aliasAdd);
+  const del = new Set((ST.aliasDel||[]).map(x => x.toUpperCase()));
+  ALIAS = SEED.alias.map(a => ({...a, st:a.st||'disetujui'})).filter(a => !del.has((a.s+'|'+a.t+'|'+NORM(a.n)).toUpperCase())).concat(ST.aliasAdd);
   AIDX = {};
   ALIAS.forEach(a => { AIDX[a.s+'|'+a.t+'|'+NORM(a.n)] = a; });
+  try { Object.keys(AUTO_CACHE).forEach(k => delete AUTO_CACHE[k]); } catch(e) {}
 }
 let AIDX = {};
 buildAlias();
-function resolve(src, t, nama){ const a = AIDX[src+'|'+t+'|'+NORM(nama)]; return a && a.k && a.st==='disetujui' ? a.k : null; }
+/* Pengenalan otomatis nama alat dari pola "jenis + nomor" (mis. QCC03, RMGC01, GCJ-02, HT 012, TERMINAL TRACTOR 12).
+   Hanya dipakai bila nama belum ada di tabel alias, dan hanya bila cocok dengan TEPAT SATU alat di terminal itu. */
+const PREFIX_JEN = {QCC:['QCC'], QC:['QCC'], AQC:['QCC'], CC:['QCC'], STS:['QCC'], CONTAINERCRANE:['QCC'],
+  RTG:['RTG'], RTGC:['RTG'], ARTG:['RTG'], ERTG:['RTG'], RUBBERTYREDGANTRY:['RTG'],
+  RMG:['RMG'], RMGC:['RMG'], ARMG:['RMG'], RAILMOUNTEDGANTRY:['RMG'], RAILMOUNTEDGANTRYCRANE:['RMG'],
+  GLC:['GLC'], GJC:['GJC'], GCJ:['GJC'], JGC:['GJC'], JIBGANTRYCRANE:['GJC'], FJC:['FJC'],
+  RST:['RST'], RS:['RST'], REACHSTACKER:['RST'], SL:['SIL'], SIL:['SIL'], SLD:['SIL'], SIDELOADER:['SIL'],
+  FL:['FLT'], FLT:['FLT'], FORKLIFT:['FLT'], HT:['HDT','TTR'], HDT:['HDT'], TT:['TTR','HDT'], TTR:['TTR'], TR:['TTR','HDT'], ITV:['HDT','TTR'],
+  HEADTRUCK:['HDT'], TERMINALTRACTOR:['TTR','HDT'], CHS:['CHS'], CH:['CHS'], CHASSIS:['CHS'], GNS:['GNS'], GENSET:['GNS'],
+  DRG:['RST'], DRF:['RST'], FOD:['FLT'], RMC:['RMG'], MHC:['MHC'], MOBILEHARBOURCRANE:['MHC'], LUFFINGCRANE:['GLC'], GANTRYLUFFINGCRANE:['GLC']};
+const AUTO_CACHE = {};
+function autoMatch(t, nama){
+  const key = t+'|'+nama; if (key in AUTO_CACHE) return AUTO_CACHE[key];
+  let res = null;
+  const U = String(nama||'').toUpperCase(), c = U.match(/(\d{3})-([A-Z]{2,4})-([A-Z]?)0*(\d{1,3})(?!\d)/);
+  if (c) {   // format SIGAP: "Head Truck 050-HDT-12", "Side loader 050-SIL-02-TPK"
+    const tt = (TERMS.find(x => x.pref===c[1])||{}).k || t, jen = PREFIX_JEN[c[2]] || [c[2]], n = +c[4];
+    const cand = Object.values(ALAT).filter(a => a.t===tt && jen.includes(a.j) && (() => { const last = a.k.split('-').pop(); return c[3] ? last===c[3]+String(n).padStart(2,'0') : /^\d+$/.test(last) && +last===n; })());
+    if (tt===t && cand.length===1) return AUTO_CACHE[key] = cand[0].k;
+  }
+  const m = String(nama||'').toUpperCase().replace(/^\d{3}-/, '').replace(/-TPK$/, '').replace(/[^A-Z0-9]/g, ' ').replace(/\bNO\b/g, ' ').trim().match(/^([A-Z ]+?)\s*0*(\d{1,3})$/);
+  if (m) {
+    const jen = PREFIX_JEN[m[1].replace(/ /g,'')]; const n = +m[2];
+    if (jen) {
+      const c = Object.values(ALAT).filter(a => a.t===t && jen.includes(a.j) && /^\d+$/.test(a.k.split('-').pop()) && +a.k.split('-').pop()===n);
+      const akt = c.filter(a => a.st==='aktif');
+      if (akt.length===1) res = akt[0].k; else if (!akt.length && c.length===1) res = c[0].k;
+    }
+  }
+  return AUTO_CACHE[key] = res;
+}
+function resolve(src, t, nama){ const a = AIDX[src+'|'+t+'|'+NORM(nama)]; if (a) return a.k && a.st==='disetujui' ? a.k : null; return autoMatch(t, nama); }
+function isAuto(src, t, nama){ return !AIDX[src+'|'+t+'|'+NORM(nama)] && !!autoMatch(t, nama); }
 
 const DEF_TARIF = SEED.tarif.map(x => ({...x, src:'Buku Tarif IPC TPK 2019 hal. 13 — Domestik, dermaga konvensional Tanjung Priok (perlu verifikasi untuk TPK 009)'}));
 const TARIF = () => ST.tarif || DEF_TARIF;
@@ -435,7 +480,7 @@ function median(a){ const s = a.slice().sort((x,y)=>x-y); const m = Math.floor(s
 /* ======================= ANTRIAN ======================= */
 function queue(terms){
   const g = {};
-  const addq = (src, r, val) => { if (r.k) return; const key = src+'|'+r.t+'|'+NORM(r.nama); const x = g[key] = g[key] || {src, t:r.t, nama:r.nama, n:0, nilai:0, sat: src==='SIGAP'?'Rp':src==='TONUS'?'box':'L', bln:new Set(), rows:[]}; x.n++; x.nilai += val; x.bln.add(r.bln); x.rows.push(r); };
+  const addq = (src, r, val) => { if (r.k) return; const al = AIDX[src+'|'+r.t+'|'+NORM(r.nama)]; if (al && !al.k && al.m==='Diabaikan') return; const key = src+'|'+r.t+'|'+NORM(r.nama); const x = g[key] = g[key] || {src, t:r.t, nama:r.nama, n:0, nilai:0, sat: src==='SIGAP'?'Rp':src==='TONUS'?'box':'L', bln:new Set(), rows:[]}; x.n++; x.nilai += val; x.bln.add(r.bln); x.rows.push(r); };
   DATA.sp.forEach(r => terms.includes(r.t) && addq('SIGAP', r, r.tot));
   DATA.pr.forEach(r => terms.includes(r.t) && addq('TONUS', r, r.box));
   DATA.bb.forEach(r => terms.includes(r.t) && r.status==='Realisasi Terverifikasi' && addq('P-FUEL', r, r.vol));
@@ -448,6 +493,115 @@ function suggest(t, nama){
   if (m) { const tt = (TERMS.find(x => x.pref===m[1])||{}).k; const j = m[2]==='FOD'?'FLT':m[2]; const k = `${tt||t}-${j}-${String(+m[3]).padStart(2,'0')}`; if (ALAT[k]) return k; }
   for (const [j,re] of JKEYS) { if (re.test(u)) { const n = (u.replace(/\d{3}-/,'').match(/(\d{1,3})(?!.*\d)/)||[])[1]; if (n) { const k = `${t}-${j}-${String(+n).padStart(2,'0')}`; if (ALAT[k]) return k; } break; } }
   return '';
+}
+
+/* ======================= MASTER ALAT: tambah / ubah / import SIMALAT ======================= */
+if (!JEN.MHC) JEN.MHC = 'Mobile Harbour Crane';
+const KEL_DEF = j => ['QCC','GLC','GJC','FJC','MHC'].includes(j) ? 'DERMAGA' : ['RTG','RMG'].includes(j) ? 'LAPANGAN' : 'BANTU';
+const kodeBaku = (t, j, no) => { const n = String(no||'').toUpperCase().replace(/[^A-Z0-9]/g,''); const m = n.match(/^([A-Z]?)0*(\d+)$/); return m ? `${t}-${j}-${m[1]}${String(+m[2]).padStart(2,'0')}` : (n ? `${t}-${j}-${n}` : ''); };
+function guessJen(nama){ const u = String(nama||'').toUpperCase(); const c = u.match(/\d{3}-([A-Z]{2,4})-/); if (c && PREFIX_JEN[c[1]]) return PREFIX_JEN[c[1]][0];
+  const m = u.replace(/[^A-Z0-9]/g,' ').replace(/\bNO\b/g,' ').trim().match(/^([A-Z ]+?)\s*\d/); if (m && PREFIX_JEN[m[1].replace(/ /g,'')]) return PREFIX_JEN[m[1].replace(/ /g,'')][0];
+  for (const [j,re] of JKEYS) if (re.test(u)) return j; return ''; }
+const guessNo = nama => { const m = String(nama||'').toUpperCase().replace(/-TPK$/,'').match(/([A-Z]?)0*(\d{1,3})(?!.*\d)/); return m ? String(+m[2]) : ''; };
+function alatOptions(t, nama, sel){
+  const gj = guessJen(nama); const L = Object.values(ALAT).filter(a => a.t===t);
+  const rank = a => (a.k===sel ? 0 : a.j===gj ? 1 : 2) * 10 + (a.st==='aktif' ? 0 : 1);
+  const lbl = a => `${a.k} · ${JEN[a.j]||a.j}${a.mk?' · '+a.mk:''}${a.th?' ('+a.th+')':''}${a.st!=='aktif'?' — nonaktif':''}`;
+  const grp = (title, arr) => arr.length ? `<optgroup label="${title}">${arr.map(a => `<option value="${a.k}" ${a.k===sel?'selected':''}>${esc(lbl(a))}</option>`).join('')}</optgroup>` : '';
+  const S = L.slice().sort((a,b) => rank(a) - rank(b) || a.k.localeCompare(b.k));
+  return grp('Paling cocok', S.filter(a => rank(a) < 20)) + grp('Alat lain di '+t, S.filter(a => rank(a) >= 20));
+}
+function aliasSet(src, t, n, k){
+  const key = src+'|'+t+'|'+NORM(n); const by = CLOUD_ON ? (cloud.profile?.email||'') : ROLES[UI.role];
+  ST.aliasAdd = ST.aliasAdd.filter(a => (a.s+'|'+a.t+'|'+NORM(a.n)) !== key);
+  if (SEED.alias.some(a => (a.s+'|'+a.t+'|'+NORM(a.n)) === key) && !ST.aliasDel.includes(key)) ST.aliasDel.push(key);
+  const na = {s:src, t, n, k, y:'Manual', m: k ? 'Diisi manual' : 'Diabaikan', st:'disetujui', by};
+  ST.aliasAdd.push(na); if (CLOUD_ON) cloud.alias(na);
+  logc(k ? 'Alias manual' : 'Abaikan nama', `${src} · ${t} · "${n}" → ${k||'(abaikan)'}`); save(); buildAlias(); rebuildData(); toast(k ? `"${n}" → ${k} tersimpan.` : `"${n}" diabaikan.`);
+}
+function aliasRemove(key){
+  const [src, t, ...rest] = key.split('|'); const n = rest.join('|');
+  ST.aliasAdd = ST.aliasAdd.filter(a => (a.s+'|'+a.t+'|'+a.n) !== key);
+  const nk = src+'|'+t+'|'+NORM(n); if (SEED.alias.some(a => (a.s+'|'+a.t+'|'+NORM(a.n)) === nk) && !ST.aliasDel.includes(nk)) ST.aliasDel.push(nk);
+  if (CLOUD_ON) cloud.aliasDel({s:src, t, n}); logc('Hapus alias', `${src} · ${t} · "${n}"`); save(); buildAlias(); rebuildData(); toast('Alias dihapus. Nama itu akan dikenali otomatis lagi bila cocok, atau kembali ke Antrian.');
+}
+function saveAlat(list, why){
+  list.forEach(a => { const isSeed = SEED.alat.some(x => x.k===a.k);
+    ALAT[a.k] = Object.assign(ALAT[a.k] || {}, a);
+    if (isSeed) ST.alatEdit[a.k] = Object.assign(ST.alatEdit[a.k]||{}, a);
+    else { ST.alatNew = (ST.alatNew||[]).filter(x => x.k!==a.k); ST.alatNew.push(Object.assign({}, ALAT[a.k])); } });
+  if (CLOUD_ON) cloud.alatUpsert(list.map(a => ALAT[a.k]));
+  logc(why, list.length===1 ? list[0].k : list.length+' alat'); save(); buildAlias(); rebuildData();
+}
+function modal(title, body, onOk, okTxt){
+  const d = document.createElement('div'); d.className = 'mdl-bg';
+  d.innerHTML = `<div class="mdl"><div class="mdl-h"><b>${title}</b><a href="#" class="mdl-x">✕</a></div><div class="mdl-b">${body}</div><div class="mdl-f"><button class="ghost" data-mc>Batal</button><button data-mok>${okTxt||'Simpan'}</button></div></div>`;
+  document.body.appendChild(d); const close = () => d.remove();
+  d.querySelector('.mdl-x').onclick = e => { e.preventDefault(); close(); }; d.querySelector('[data-mc]').onclick = close;
+  d.querySelector('[data-mok]').onclick = () => { if (onOk(d) !== false) close(); };
+  return d;
+}
+function alatForm(kode, ctx){
+  const a = kode ? ALAT[kode] : {t: ctx?.t || (termsSel().length===1 ? termsSel()[0] : TERMS[0].k), j: guessJen(ctx?.nama) || 'HDT', st:'aktif'};
+  const no0 = kode ? kode.split('-').pop() : guessNo(ctx?.nama);
+  const sel = (id, opts, v, dis) => `<select id="${id}" ${dis?'disabled':''}>${opts.map(([k,n]) => `<option value="${k}" ${String(k)===String(v)?'selected':''}>${esc(n)}</option>`).join('')}</select>`;
+  const body = `${ctx ? `<div class="note" style="margin-bottom:10px">Membuat alat baru untuk nama <code>${esc(ctx.nama)}</code> (${ctx.src}, ${ctx.t}). Setelah disimpan, nama ini otomatis dipetakan ke alat baru.</div>` : ''}
+    <div class="fgrid">
+      <label>Terminal ${sel('afT', TERMS.map(t => [t.k, t.k+' · '+t.n]), a.t, !!kode)}</label>
+      <label>Jenis alat ${sel('afJ', Object.entries(JEN).map(([k,n]) => [k, k+' · '+n]), a.j, !!kode)}</label>
+      <label>Nomor alat <input id="afN" value="${esc(no0)}" ${kode?'disabled':''} placeholder="mis. 2 atau S03"></label>
+      <label>Kelompok ${sel('afG', [['DERMAGA',KELN.DERMAGA],['LAPANGAN',KELN.LAPANGAN],['BANTU',KELN.BANTU]], a.g || KEL_DEF(a.j))}</label>
+      <label class="w2">Nama resmi / nama di kontrak SLA <input id="afNm" value="${esc(a.nm||'')}"></label>
+      <label>Merk / tipe <input id="afMk" value="${esc(a.mk||'')}"></label>
+      <label>Tahun pembuatan <input id="afTh" inputmode="numeric" value="${esc(a.th||'')}"></label>
+      <label>Sumber energi ${sel('afEn', [['',''],['BBM','BBM'],['Listrik','Listrik'],['Hybrid','Hybrid']], a.en||'')}</label>
+      <label>Harga SLA / bulan (Rp) <input id="afH" inputmode="numeric" value="${a.h??''}"></label>
+      <label>Status ${sel('afSt', [['aktif','aktif'],['nonaktif','nonaktif']], a.st||'aktif')}</label>
+    </div><div class="kprev">Kode baku: <b id="afK">${kode || kodeBaku(a.t, a.j, no0)}</b> <span id="afKw" class="neg"></span></div>`;
+  const d = modal(kode ? 'Ubah data alat '+kode : 'Tambah alat baru', body, d => {
+    const v = id => d.querySelector('#'+id).value.trim(); const t = v('afT'), j = v('afJ'); const k = kode || kodeBaku(t, j, v('afN'));
+    if (!k) { toast('Isi nomor alat.'); return false; } if (!kode && ALAT[k]) { toast(k+' sudah ada di master.'); return false; }
+    const th = v('afTh'), h = v('afH').replace(/\./g,'').replace(',','.');
+    const rec = {k, t, j, g:v('afG'), nm:v('afNm'), mk:v('afMk'), th: th ? +th : null, en:v('afEn'), h: h ? +h : (kode ? null : null), sla: !!(h && +h>0), st:v('afSt')};
+    saveAlat([rec], kode ? 'Ubah data alat' : 'Tambah alat');
+    if (ctx) aliasSet(ctx.src, ctx.t, ctx.nama, k); else toast(kode ? 'Data alat tersimpan.' : k+' ditambahkan.');
+    setTimeout(render, 0);
+  });
+  if (!kode) { const upd = () => { const k = kodeBaku(d.querySelector('#afT').value, d.querySelector('#afJ').value, d.querySelector('#afN').value); d.querySelector('#afK').textContent = k || '—'; d.querySelector('#afKw').textContent = ALAT[k] ? ' sudah ada di master' : ''; };
+    ['afT','afJ','afN'].forEach(id => d.querySelector('#'+id).oninput = d.querySelector('#'+id).onchange = upd); d.querySelector('#afJ').addEventListener('change', () => d.querySelector('#afG').value = KEL_DEF(d.querySelector('#afJ').value)); upd(); }
+}
+document.addEventListener('click', e => { const ed = e.target.closest('[data-aed]'); if (ed) { e.preventDefault(); alatForm(ed.dataset.aed); }
+  const ad = e.target.closest('[data-adel]'); if (ad) { e.preventDefault(); if (confirm('Hapus alias ini?')) { aliasRemove(ad.dataset.adel); render(); } } });
+/* import ekspor SIMALAT */
+function termOfName(n){ const u = String(n||'').toUpperCase(); if (/KIJING/.test(u)) return 'PNK'; if (/PRIOK|JAKARTA/.test(u)) return 'JKT1';
+  const t = TERMS.find(t => u && (t.n.toUpperCase().includes(u) || u.includes(t.n.toUpperCase().split(' (')[0]))); return t ? t.k : null; }
+let SIMPEND = null;
+function simalatPreview(aoa, fname){
+  const hi = aoa.findIndex(r => r.some(c => /NOMOR ALAT/i.test(String(c||''))) && r.some(c => /KODE JENIS/i.test(String(c||''))));
+  const out = document.getElementById('alImpRes'); if (hi < 0) { out.innerHTML = `<div class="warnbox">Kolom "Nomor Alat" dan "Kode Jenis" tidak ditemukan. Pastikan ini file ekspor SIMALAT (sheet Database Alat).</div>`; return; }
+  const H = aoa[hi].map(c => String(c||'').trim().toUpperCase()); const col = re => H.findIndex(h => re.test(h));
+  const cT = col(/^TERMINAL/), cKat = col(/KATEGORI/), cJ = col(/KODE JENIS/), cNo = col(/NOMOR ALAT/), cBr = col(/BRAND|TIPE/), cTh = col(/TAHUN PEMBUATAN/), cSt = col(/STATUS/), cEn = col(/ENERGI/), cMl = col(/MILIK/), cNmJ = col(/NAMA JENIS/);
+  const rows = [], seen = {};
+  aoa.slice(hi+1).forEach((r, i) => { if (!r[cNo] && !r[cJ]) return;
+    const t = termOfName(r[cT]); const jr = String(r[cJ]||'').toUpperCase().replace(/[^A-Z]/g,''); const j = (PREFIX_JEN[jr]||[jr])[0];
+    const kat = String(r[cKat]||'').toUpperCase(); const g = /DERMAGA/.test(kat) ? 'DERMAGA' : /LAPANGAN/.test(kat) ? 'LAPANGAN' : 'BANTU';
+    const nm = String(r[cNo]||'').toUpperCase().match(/([A-Z]?)0*(\d+)\s*$/); const k = t && j && nm ? kodeBaku(t, j, nm[1]+nm[2]) : '';
+    const rec = {k, t, j, g, mk: String(r[cBr]||'').trim(), th: +r[cTh] || null, en: String(r[cEn]||'').trim(), own: String(r[cMl]||'').trim(), stSim: String(r[cSt]||'').trim(), raw: String(r[cNo]||''), jn: String(r[cNmJ]||'')};
+    let st = !t ? 'gagal' : !JEN[j] ? 'gagal' : !k ? 'gagal' : seen[k] ? 'duplikat' : ALAT[k] ? 'update' : 'baru';
+    rec.why = !t ? `Terminal "${r[cT]}" tidak dikenal` : !JEN[j] ? `Jenis "${r[cJ]}" belum ada di daftar jenis` : !k ? 'Nomor alat tidak terbaca' : st==='duplikat' ? `Nomor ${rec.raw} muncul lebih dari sekali di file — tambahkan manual dengan nomor yang benar` : '';
+    if (st==='update') { const o = ALAT[k]; rec.chg = ['mk','th','en'].filter(f => rec[f] && String(rec[f]) !== String(o[f]||'')).map(f => ({mk:'merk',th:'tahun',en:'energi'})[f]).join(', '); if (!rec.chg) st = 'sama'; }
+    rec.s = st; seen[k] = 1; rows.push(rec); });
+  SIMPEND = rows; const c = s => rows.filter(r => r.s===s).length;
+  out.innerHTML = `<div class="card" style="margin-bottom:12px;background:#fbfcfe"><h3>Pratinjau import: ${esc(fname)} <small>${rows.length} baris</small></h3>
+    <div class="row" style="gap:8px;margin-bottom:8px">${pill(c('baru')+' alat baru','p-ok')} ${pill(c('update')+' dilengkapi','p-info')} ${pill(c('sama')+' sudah sama','p-mute')} ${c('duplikat')+c('gagal') ? pill((c('duplikat')+c('gagal'))+' perlu dicek','p-warn') : ''}</div>
+    <div class="tw" style="max-height:360px"><table><tr><th>Nomor di SIMALAT</th><th>Jenis</th><th>Kode baku</th><th>Kelompok</th><th>Merk / tipe</th><th class="n">Tahun</th><th>Energi</th><th>Hasil</th></tr>`+
+    rows.map(r => `<tr class="${r.s==='sama'?'dim':''}"><td>${esc(r.raw)}</td><td>${esc(r.jn||r.j)}</td><td><b>${esc(r.k||'–')}</b></td><td>${esc(KELN[r.g]||'')}</td><td>${esc(r.mk)}</td><td class="n">${r.th||''}</td><td>${esc(r.en)}</td><td>${r.s==='baru'?pill('baru','p-ok'):r.s==='update'?pill('dilengkapi: '+r.chg,'p-info'):r.s==='sama'?pill('sudah sama','p-mute'):pill(r.s,'p-warn')+` <span class="muted" style="font-size:11.5px">${esc(r.why)}</span>`}</td></tr>`).join('')+`</table></div>
+    <div class="note" style="margin-top:8px">Alat yang sudah ada hanya dilengkapi merk, tahun & sumber energi — kelompok, harga SLA, status dan alias tidak diubah.</div>
+    <div class="row" style="margin-top:8px"><button id="simOk" ${c('baru')+c('update')?'':'disabled'}>Simpan ${c('baru')+c('update')} alat</button><button class="ghost" id="simNo">Batal</button></div></div>`;
+  document.getElementById('simNo').onclick = () => { SIMPEND = null; out.innerHTML = ''; };
+  document.getElementById('simOk').onclick = () => {
+    const list = SIMPEND.filter(r => r.s==='baru' || r.s==='update').map(r => r.s==='baru' ? {k:r.k, t:r.t, j:r.j, g:r.g, nm:'', mk:r.mk, th:r.th, en:r.en, own:r.own, h:null, sla:false, st:'aktif'} : {k:r.k, ...(r.mk?{mk:r.mk}:{}), ...(r.th?{th:r.th}:{}), ...(r.en?{en:r.en}:{}), ...(r.own?{own:r.own}:{})});
+    saveAlat(list, 'Import SIMALAT'); toast(`${list.length} alat tersimpan dari SIMALAT.`); SIMPEND = null; render(); };
 }
 
 /* ======================= FORMAT ======================= */
@@ -1083,6 +1237,7 @@ function parseUpload(page, aoa, fname){
     ${ver!==null?`<div class="note">Status P-Fuel: ${num(ver)} baris "Realisasi Terverifikasi" dihitung; ${num(out.rows.length-ver)} baris status lain disimpan sebagai log audit. ${dup?`<b>${dup} baris</b> dengan BA, alat, dan tanggal sama ditandai sebagai pengisian ganda.`:''}</div>`:''}
     ${out.warn.length?`<div class="note">${out.warn.map(esc).join('<br>')}</div>`:''}
     ${unkNames.length?`<div class="warnbox">Nama belum dikenal (masuk Antrian Pemetaan): ${unkNames.slice(0,12).map(n=>'<code>'+esc(n)+'</code>').join(', ')}${unkNames.length>12?' …':''}</div>`:'<div class="okbox">Semua nama alat dikenali.</div>'}
+    ${(() => { const au = [...new Map(known.filter(r => isAuto(r.src, r.t, r.nama)).map(r => [r.nama, r.k])).entries()]; return au.length ? `<div class="okbox">Dikenali otomatis dari pola nama (${au.length}): ${au.slice(0,16).map(([n,k]) => '<code>'+esc(n)+'</code> → <b>'+esc(k)+'</b>').join(', ')}${au.length>16?' …':''}<div class="muted" style="font-size:11.5px;margin-top:3px">Kalau ada yang keliru, betulkan di Master Data → Alias (alias yang diisi manual selalu didahulukan).</div></div>` : ''; })()}
     ${lockedM.length?`<div class="warnbox">🔒 Periode ${lockedM.map(m=>BLN[m-1]).join(', ')} terkunci — tidak bisa disimpan.</div>`:`<div class="note">Menyimpan akan <b>mengganti</b> data ${s.name} ${tsU.join(', ')} untuk bulan ${months.map(m=>BLN[m-1]).join(', ')} yang sudah ada.</div>`}
     <div class="row"><button id="upSave" ${lockedM.length||!out.rows.length?'disabled':''}>Simpan data</button><button class="ghost" id="upCancel">Batal</button></div></div>`;
   document.getElementById('upSave').onclick = commitUpload; document.getElementById('upCancel').onclick = () => { PENDING=null; document.getElementById('upRes').innerHTML=''; };
@@ -1411,16 +1566,28 @@ P.antrian = () => {
   const q = queue(termsUser().filter(t => UI.fterm==='ALL' || t===UI.fterm));
   let h = `<div class="note">Nama alat dari file upload yang belum ada di tabel Alias. Datanya <b>tidak hilang</b>: begitu dipetakan, semua baris yang tertahan langsung masuk dan upload berikutnya dengan nama yang sama dikenali otomatis. ${isPusat()?'Sebagai Admin Pusat, pemetaan langsung berlaku.':'Sebagai Admin Terminal, pemetaan masuk sebagai usulan dan berlaku setelah disetujui Admin Pusat.'}</div>`;
   const pend = ST.aliasAdd.filter(a => a.st==='usulan');
-  if (pend.length) h += `<div class="card" style="margin-bottom:12px"><h3>Usulan alias menunggu persetujuan <small>${pend.length}</small></h3><table><tr><th>Sumber</th><th>Terminal</th><th>Nama asli</th><th>Diusulkan ke</th><th>Oleh</th><th></th></tr>`+pend.map((a,i) => `<tr><td>${a.s}</td><td>${a.t}</td><td>${esc(a.n)}</td><td><b>${a.k}</b></td><td>${esc(a.by||'')}</td><td>${isPusat()?`<button class="sm" data-ap="${ST.aliasAdd.indexOf(a)}">Setujui</button> <button class="sm ghost" data-rj="${ST.aliasAdd.indexOf(a)}">Tolak</button>`:'menunggu'}</td></tr>`).join('')+`</table></div>`;
+  if (pend.length) h += `<div class="card" style="margin-bottom:12px"><h3>Usulan alias menunggu persetujuan <small>${pend.length}</small></h3><table><tr><th>Sumber</th><th>Terminal</th><th>Nama asli</th><th>Diusulkan ke</th><th>Oleh</th><th></th></tr>`+pend.map((a,i) => `<tr><td>${a.s}</td><td>${a.t}</td><td>${esc(a.n)}</td><td><b>${a.k || '(abaikan)'}</b></td><td>${esc(a.by||'')}</td><td>${isPusat()?`<button class="sm" data-ap="${ST.aliasAdd.indexOf(a)}">Setujui</button> <button class="sm ghost" data-rj="${ST.aliasAdd.indexOf(a)}">Tolak</button>`:'menunggu'}</td></tr>`).join('')+`</table></div>`;
   if (!q.length) return h + `<div class="okbox">Tidak ada nama alat yang tertahan. 🎉</div>`;
+  h += `<div class="note" style="margin-bottom:10px">Nama dengan pola jenis + nomor (mis. <code>RMGC01</code>, <code>HT12</code>, <code>Head Truck 050-HDT-12</code>) sudah dikenali otomatis dan tidak muncul di sini. Yang tersisa di bawah adalah nama yang <b>tidak cocok</b> — pilih salah satu: <b>Petakan</b> ke alat yang ada, <b>＋ Alat baru</b> bila alatnya belum terdaftar, atau <b>Abaikan</b> bila bukan alat milik terminal.</div>`;
   h += `<div class="card"><h3>Nama alat tertahan <small>${q.length} nama</small></h3><div class="tw" style="max-height:640px"><table><tr><th>Sumber</th><th>Terminal</th><th>Nama asli</th><th class="n">Baris</th><th class="n">Nilai tertahan</th><th>Bulan</th><th>Petakan ke</th><th></th></tr>`+
-    q.map((g,i) => { const sg = suggest(g.t, g.nama); const opts = Object.values(ALAT).filter(a => a.t===g.t).map(a => `<option value="${a.k}" ${a.k===sg?'selected':''}>${a.k}${a.st!=='aktif'?' (nonaktif)':''}</option>`).join('');
+    q.map((g,i) => { const sg = suggest(g.t, g.nama); const opts = alatOptions(g.t, g.nama, sg);
       const blank = g.nama.includes('(kosong)') || /^XX+$/i.test(g.nama);
-      return `<tr><td>${g.src}</td><td>${g.t}</td><td><code>${esc(g.nama)}</code>${sg?'<span class="tag">usulan otomatis</span>':''}</td><td class="n">${num(g.n)}</td><td class="n">${g.sat==='Rp'?rp(g.nilai):num(g.nilai)+' '+g.sat}</td><td>${[...g.bln].sort((a,b)=>a-b).map(m=>BLN[m-1]).join(', ')}</td><td>${canEdit()?(blank?`<span class="muted">Nama kosong/tidak valid — pilih alat per baris</span>`:`<select data-qk="${i}"><option value="">— pilih kode alat —</option>${opts}</select>`):''}</td><td>${canEdit()?(blank?`<button class="sm ghost" data-qrow="${i}">Per baris</button>`:`<button class="sm" data-qs="${i}">${isPusat()?'Simpan':'Usulkan'}</button>`):''}</td></tr><tr id="qr${i}" style="display:none"><td colspan="8"></td></tr>`; }).join('')+`</table></div></div>`;
+      return `<tr><td>${g.src}</td><td>${g.t}</td><td><code>${esc(g.nama)}</code>${sg?'<span class="tag">usulan otomatis</span>':''}</td><td class="n">${num(g.n)}</td><td class="n">${g.sat==='Rp'?rp(g.nilai):num(g.nilai)+' '+g.sat}</td><td>${[...g.bln].sort((a,b)=>a-b).map(m=>BLN[m-1]).join(', ')}</td><td>${canEdit()?(blank?`<span class="muted">Nama kosong/tidak valid — pilih alat per baris</span>`:`<select data-qk="${i}"><option value="">— pilih kode alat —</option>${opts}</select>`):''}</td><td style="white-space:nowrap">${canEdit()?(blank?`<button class="sm ghost" data-qrow="${i}">Per baris</button>`:`<button class="sm" data-qs="${i}">${isPusat()?'Petakan':'Usulkan'}</button>${isPusat()?` <button class="sm ghost" data-qnew="${i}" title="Alat belum ada di master: buat alat baru lalu petakan nama ini ke alat tersebut">＋ Alat baru</button>`:''} <button class="sm ghost" data-qign="${i}" title="Bukan alat milik terminal (mis. truk luar / virtual) — baris tidak dihitung">Abaikan</button>`):''}</td></tr><tr id="qr${i}" style="display:none"><td colspan="8"></td></tr>`; }).join('')+`</table></div></div>`;
   UI._q = q; return h;
 };
 P.antrian.after = () => {
   const q = UI._q || [];
+  const byWho = () => CLOUD_ON ? (cloud.profile?.email||'') : ROLES[UI.role]+(UI.role==='terminal'?' '+UI.rterm:'');
+  document.querySelectorAll('[data-qnew]').forEach(b => b.onclick = () => { const g = q[+b.dataset.qnew]; alatForm(null, {src:g.src, t:g.t, nama:g.nama}); });
+  document.querySelectorAll('[data-qign]').forEach(b => b.onclick = () => { const g = q[+b.dataset.qign];
+    const pre = (g.nama.toUpperCase().match(/^[A-Z]+/)||[''])[0];
+    const sim = pre.length >= 2 ? q.filter(x => x!==g && x.src===g.src && x.t===g.t && (x.nama.toUpperCase().match(/^[A-Z]+/)||[''])[0]===pre && !x.nama.includes('(kosong)')) : [];
+    let list = [g];
+    if (sim.length && confirm(`Abaikan juga ${sim.length} nama serupa?\n${sim.map(x => x.nama).join(', ')}\n\nOK = abaikan semua · Batal = hanya "${g.nama}"`)) list = list.concat(sim);
+    else if (!confirm(`Abaikan "${g.nama}" (${g.t}, ${g.src})?\n${num(g.n)} baris tidak akan dihitung ke alat mana pun. Bisa dibatalkan di Master Data → Alias.`)) return;
+    list.forEach(x => { const na = {s:x.src, t:x.t, n:x.nama, k:null, y:'Manual', m:'Diabaikan', st:isPusat()?'disetujui':'usulan', by:byWho()};
+      ST.aliasAdd.push(na); if (CLOUD_ON) cloud.alias(na); logc(isPusat()?'Abaikan nama':'Usulan abaikan nama', `${x.src} · ${x.t} · "${x.nama}"`); });
+    save(); buildAlias(); rebuildData(); toast(isPusat()?`${list.length} nama diabaikan.`:'Usulan dikirim ke Admin Pusat.'); render(); });
   document.querySelectorAll('[data-qs]').forEach(b => b.onclick = () => { const g = q[+b.dataset.qs]; const k = document.querySelector(`[data-qk="${b.dataset.qs}"]`).value; if (!k) { toast('Pilih kode alat dulu.'); return; }
     const na = {s:g.src, t:g.t, n:g.nama, k, y:'Manual', m:'Dipetakan di Antrian', st:isPusat()?'disetujui':'usulan', by:CLOUD_ON?(cloud.profile?.email||''):ROLES[UI.role]+(UI.role==='terminal'?' '+UI.rterm:'')};
     ST.aliasAdd.push(na); if (CLOUD_ON) cloud.alias(na);
@@ -1438,12 +1605,18 @@ P.master = () => {
   let h = tabs([['alat','Alat'],['alias','Alias'],['tarif','Tarif'],['faktor','Faktor SLA'],['terminal','Terminal'],['kunci','Kunci Periode'],['log','Log Perubahan']]);
   const tab = curTab(); const terms = termsSel();
   if (tab==='alat') {
-    const rows = Object.values(ALAT).filter(a => terms.includes(a.t)).map(a => ({...a, gn:KELN[a.g], jn:JEN[a.j], nal:ALIAS.filter(x=>x.k===a.k).length}));
-    h += `<div class="note">${num(rows.length)} alat. Kode baku TERMINAL-JENIS-NN tidak berubah walau alat dimutasi; lokasi dicatat terpisah. ${isPusat()?'Status alat bisa diubah di kolom Status.':''}</div>`;
-    h += `<div class="card">`+table('ms_alat',[{k:'k',h:'Kode baku'},{k:'t',h:'Terminal'},{k:'gn',h:'Kelompok'},{k:'jn',h:'Jenis'},{k:'nm',h:'Nama resmi (SLA)'},{k:'mk',h:'Merk'},{k:'h',h:'Harga SLA/bln',n:1,f:num},{k:'lok',h:'Lokasi'},{k:'nal',h:'Alias',n:1},{k:'st',h:'Status',f:(v,r)=>isPusat()?`<select data-ms="${r.k}">${['aktif','nonaktif'].map(s=>`<option ${s===v?'selected':''}>${s}</option>`).join('')}</select>`:(v==='aktif'?pill('aktif','p-ok'):pill('nonaktif','p-mute'))},{k:'cek',h:'Catatan verifikasi'}],rows,{sort:'k',dir:1,h:600})+`</div>`;
+    const rows = Object.values(ALAT).filter(a => terms.includes(a.t)).map(a => ({...a, gn:KELN[a.g], jn:JEN[a.j]||a.j, nal:ALIAS.filter(x=>x.k===a.k).length}));
+    h += `<div class="note">${num(rows.length)} alat. Kode baku TERMINAL-JENIS-NN tidak berubah walau alat dimutasi; lokasi dicatat terpisah.${isPusat()?' Klik ✎ untuk mengubah data alat.':''}</div>`;
+    if (isPusat()) h += `<div class="row" style="margin:0 0 10px"><button id="alAdd">＋ Tambah alat</button><label class="btn ghost" style="cursor:pointer">⬆ Import database alat (SIMALAT)<input type="file" id="alImp" accept=".xlsx" style="display:none"></label><span class="muted" style="font-size:12px">File ekspor SIMALAT (sheet "Database Alat"): alat baru ditambahkan, alat yang sudah ada dilengkapi merk, tahun & sumber energi.</span></div><div id="alImpRes"></div>`;
+    h += `<div class="card">`+table('ms_alat',[{k:'k',h:'Kode baku',f:(v,r)=>`<b>${esc(v)}</b>${isPusat()?` <a href="#" data-aed="${esc(v)}" title="Ubah data alat" style="text-decoration:none">✎</a>`:''}`,x:r=>r.k},{k:'t',h:'Terminal'},{k:'gn',h:'Kelompok'},{k:'jn',h:'Jenis'},{k:'nm',h:'Nama resmi (SLA)'},{k:'mk',h:'Merk / tipe'},{k:'th',h:'Tahun',n:1,f:v=>v||'–'},{k:'en',h:'Energi'},{k:'h',h:'Harga SLA/bln',n:1,f:num},{k:'nal',h:'Alias',n:1},{k:'st',h:'Status',f:(v,r)=>isPusat()?`<select data-ms="${r.k}">${['aktif','nonaktif'].map(s=>`<option ${s===v?'selected':''}>${s}</option>`).join('')}</select>`:(v==='aktif'?pill('aktif','p-ok'):pill('nonaktif','p-mute'))},{k:'cek',h:'Catatan verifikasi'}],rows,{sort:'k',dir:1,h:600})+`</div>`;
   } else if (tab==='alias') {
     const rows = ALIAS.filter(a => terms.includes(a.t)).map(a => ({...a, st:a.st||'disetujui'}));
-    h += `<div class="card">`+table('ms_alias',[{k:'s',h:'Sumber'},{k:'t',h:'Terminal'},{k:'n',h:'Nama asli'},{k:'k',h:'Kode baku',f:v=>alatLbl(v)},{k:'y',h:'Keyakinan',f:v=>v==='Tinggi'?pill(v,'p-ok'):v==='Sedang'?pill(v,'p-info'):v==='Rendah'?pill(v,'p-warn'):pill(v||'—','p-mute')},{k:'m',h:'Cara pemetaan'},{k:'st',h:'Status'}],rows,{sort:'t',dir:1,h:600})+`</div>`;
+    if (isPusat()) h += `<div class="card" style="margin-bottom:12px"><h3>Tambah / ubah alias <small>nama di file sumber → kode baku. Alias manual selalu didahulukan dari pengenalan otomatis.</small></h3>
+      <div class="row" style="flex-wrap:wrap;gap:8px"><select id="naS">${['TONUS','SIGAP','P-FUEL','SLA','EHM'].map(x=>`<option>${x}</option>`).join('')}</select><select id="naT">${TERMS.map(t=>`<option ${terms.length===1&&terms[0]===t.k?'selected':''}>${t.k}</option>`).join('')}</select>
+      <input id="naN" placeholder="Nama persis seperti di file (mis. RST02)" style="min-width:260px"><select id="naK" style="min-width:260px"></select><button id="naAdd">Simpan alias</button></div>
+      <div class="muted" style="font-size:11.5px;margin-top:6px">Pilih "(abaikan)" untuk nama yang bukan alat milik terminal — barisnya tidak dihitung dan tidak muncul lagi di Antrian.</div></div>`;
+    h += `<div class="card">`+table('ms_alias',[{k:'s',h:'Sumber'},{k:'t',h:'Terminal'},{k:'n',h:'Nama asli'},{k:'k',h:'Kode baku',f:(v,r)=>v?alatLbl(v):(r.m==='Diabaikan'?pill('diabaikan','p-mute'):'–')},{k:'y',h:'Keyakinan',f:v=>v==='Tinggi'?pill(v,'p-ok'):v==='Sedang'?pill(v,'p-info'):v==='Rendah'?pill(v,'p-warn'):esc(v||'')},{k:'m',h:'Metode'},{k:'st',h:'Status',f:v=>v==='usulan'?pill('usulan','p-warn'):pill('disetujui','p-ok')},
+      {k:'_x',h:'',f:(v,r)=>isPusat()?`<a href="#" data-adel="${esc(r.s+'|'+r.t+'|'+r.n)}" title="Hapus alias" style="text-decoration:none;color:#b91c1c">✕</a>`:''}],rows,{sort:'n',dir:1,h:600})+`</div>`;
   } else if (tab==='tarif') {
     const rows = TARIF().map((r,i) => ({...r, i}));
     h += `<div class="note">Tarif hanya bisa diubah Admin Pusat dan disimpan dengan tanggal berlaku. Sementara semua produksi dihitung dengan tarif <b>domestik</b>; kolom jenis pelayaran disiapkan untuk ocean going. 40'H dan 45' memakai tarif 40'. Terminal tanpa tarif tidak dihitung pendapatannya.</div>`;
@@ -1462,6 +1635,11 @@ P.master = () => {
 };
 P.master.after = () => {
   ['ms_alat','ms_alias','ms_log'].forEach(drawTable);
+  const aa = document.getElementById('alAdd'); if (aa) aa.onclick = () => alatForm(null);
+  const ai = document.getElementById('alImp'); if (ai) ai.onchange = () => { const f = ai.files[0]; if (f) f.arrayBuffer().then(readXlsx).then(aoa => simalatPreview(aoa, f.name)).catch(e => toast('File tidak bisa dibaca: '+e.message)); ai.value = ''; };
+  const nk = document.getElementById('naK'), nt = document.getElementById('naT');
+  if (nk) { const fill = () => { const cur = nk.value; nk.innerHTML = `<option value="">— pilih kode alat —</option><option value="__IGN__">(abaikan — bukan alat milik terminal)</option>` + alatOptions(nt.value, document.getElementById('naN').value, ''); if (cur && [...nk.options].some(o => o.value===cur)) nk.value = cur; }; fill(); nt.onchange = fill; document.getElementById('naN').onchange = fill;
+    document.getElementById('naAdd').onclick = () => { const sN = document.getElementById('naS').value, t = nt.value, n = document.getElementById('naN').value.trim(), k = nk.value; if (!n || !k) { toast('Isi nama asli dan pilih kode alat.'); return; } aliasSet(sN, t, n, k==='__IGN__' ? null : k); render(); }; }
   document.querySelectorAll('[data-ms]').forEach(s => s.onchange = () => { const k = s.dataset.ms; ALAT[k].st = s.value; ST.alatEdit[k] = Object.assign(ST.alatEdit[k]||{}, {st:s.value}); if (CLOUD_ON) cloud.alat(k, {status:s.value}); logc('Ubah status alat', k+' → '+s.value); save(); });
   document.querySelectorAll('[data-tf]').forEach(i => i.onchange = () => { const t = TARIF().map(x=>({...x})); const r = t[+i.dataset.tf]; if (+i.value === +r.v) return; if (!(+i.value > 0)) { toast('Isi nilai tarif yang valid.'); i.value = r.v; return; } logc('Ubah tarif', `${r.t} ${r.keg} ${r.uk}' ${r.fm}: ${num(r.v)} → ${num(+i.value)}`); r.v = +i.value; r.src = 'Diubah Admin Pusat '+new Date().toISOString().slice(0,10); ST.tarif = t; if (CLOUD_ON) cloud.tarif(); save(); });
   document.querySelectorAll('[data-td]').forEach(b => b.onclick = () => { const t = TARIF().map(x=>({...x})); const r = t.splice(+b.dataset.td,1)[0]; ST.tarif = t; if (CLOUD_ON) cloud.tarif(); logc('Hapus tarif', `${r.t} ${r.keg} ${r.uk}' ${r.fm}`); save(); render(); });
@@ -1527,7 +1705,7 @@ const cloud = {
     TERMS.splice(0, TERMS.length, ...terms.map(t => ({k:t.kode, n:t.nama, pref:t.prefiks_sigap||'', sla:t.nama_sla||'', sig:t.nama_sigap||t.nama, pf:t.lokasi_pfuel||''})));
     Object.keys(TN).forEach(k => delete TN[k]); TERMS.forEach(t => TN[t.k] = t.n);
     Object.keys(ALAT).forEach(k => delete ALAT[k]);
-    alat.forEach(a => ALAT[a.kode] = {k:a.kode, t:a.terminal, j:a.jenis, g:a.kelompok, no:a.nomor, nm:a.nama_resmi||'', mk:a.merk||'', h:a.harga_sla===null?null:+a.harga_sla, sla:!!a.masuk_sla, st:a.status, lok:a.lokasi||'', cat:a.catatan||'', cek:a.cek||''});
+    alat.forEach(a => ALAT[a.kode] = {k:a.kode, t:a.terminal, j:a.jenis, g:a.kelompok, no:a.nomor, nm:a.nama_resmi||'', mk:a.merk||'', h:a.harga_sla===null?null:+a.harga_sla, sla:!!a.masuk_sla, st:a.status, lok:a.lokasi||'', cat:a.catatan||'', cek:a.cek||'', th:a.tahun||null, en:a.energi||'', own:a.milik||''});
     SEED.alias = alias.filter(a => a.status==='disetujui').map(a => ({s:a.sumber, t:a.terminal, n:a.nama_asli, k:a.kode_alat, y:a.keyakinan, m:a.metode, st:'disetujui'}));
     ST.aliasAdd = alias.filter(a => a.status==='usulan').map(a => ({s:a.sumber, t:a.terminal, n:a.nama_asli, k:a.kode_alat, y:a.keyakinan, m:a.metode, st:'usulan', by:a.dibuat_oleh}));
     buildAlias();
@@ -1574,6 +1752,8 @@ const cloud = {
   avail(k, bln, v){ this.bg(this.insert('availability', [{kode_alat:k, tahun:YEAR, bulan:bln, terminal:ALAT[k]?.t, nilai:v}], 'kode_alat,tahun,bulan'), 'availability'); },
   anom(id, t, st){ this.bg(this.insert('anomali_status', [{id, terminal:t||null, status:st, oleh:this.profile?.email||''}], 'id'), 'status anomali'); },
   alat(k, f){ this.bg(this.patch('alat', `kode=eq.${this.q(k)}`, f), 'alat'); },
+  alatRow(a){ return {kode:a.k, terminal:a.t, jenis:a.j, kelompok:a.g, nomor: /^\d+$/.test(a.k.split('-').pop()) ? +a.k.split('-').pop() : null, nama_resmi:a.nm||null, merk:a.mk||null, harga_sla:a.h??null, masuk_sla:!!a.sla, status:a.st||'aktif', lokasi:a.lok||null, catatan:a.cat||null, tahun:a.th||null, energi:a.en||null, milik:a.own||null}; },
+  alatUpsert(list){ return this.bg(this.insert('alat', list.map(a => this.alatRow(a)), 'kode'), 'alat'); },
   tarif(){
     // Aman: tulis tarif baru dulu, baru hapus baris lama. Panggilan beruntun diantrikan agar tidak saling tumpuk.
     const rows = TARIF().map(r => ({terminal:r.t, kegiatan:r.keg, ukuran:String(r.uk), fm:r.fm, pelayaran:r.pl||'DOMESTIK', tarif:+r.v, sumber:r.src||null}));
