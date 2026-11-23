@@ -183,6 +183,17 @@ table.gt td.n,table.gt th.n{text-align:right}
 .sd-n{display:flex;align-items:center;gap:6px;margin-bottom:6px}.sd-n b{font-size:14px}.sd-n em{margin-left:auto;font-style:normal;font-size:11px;font-weight:800;color:#64748b;background:#f1f5f9;border-radius:10px;padding:1px 7px}
 .sd-i{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#475569;padding:2px 0}
 .sd-i .dot{min-width:20px;height:19px;line-height:19px;font-size:10.5px}
+
+.spt-wrap{display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center}
+.spt-donut{display:flex;flex-direction:column;align-items:center;gap:10px}
+.spt-dl{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:12px}.spt-dl div{display:flex;align-items:center;gap:6px}.spt-dl i{width:9px;height:9px;border-radius:3px}.spt-dl span{color:#64748b;margin-left:auto}
+.spt-row{display:grid;grid-template-columns:200px 1fr 120px;gap:14px;align-items:center;padding:9px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;border-radius:10px}
+.spt-row:hover{background:#f8fafc}.spt-row.on{background:#eef6ff;box-shadow:inset 3px 0 0 #3b82f6}
+.spt-n{display:flex;align-items:center;gap:9px}
+.spt-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;gap:1px;min-width:4px}
+.spt-meta{font-size:11.5px;color:#64748b;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spt-v{text-align:right}.spt-v b{display:block;font-size:15px}.spt-v span{font-size:11.5px;color:#94a3b8}
+@media(max-width:1000px){.spt-wrap{grid-template-columns:1fr}.spt-row{grid-template-columns:120px 1fr 100px}}
 </style>
 </head>
 <body>
@@ -1142,6 +1153,33 @@ P.produksi = () => {
 };
 P.produksi.after = () => { ['pr_alat','pr_raw','pr_eval','pr_rinD','pr_rinL','pr_rinB'].forEach(drawTable); wireUpload('produksi'); };
 
+/* ---------- Sparepart: ringkasan per terminal ---------- */
+const THEX = {JKT1:'#3b82f6', PJG:'#14b8a6', TBR:'#f59e0b', PLB:'#8b5cf6', PNK:'#ef4444', JMB:'#22c55e', KJG:'#ec4899'};
+function spTerminalCard(terms, raw, A){
+  const rows = terms.map(t => { const r = raw.filter(x => x.t===t); const tot = r.reduce((a,x)=>a+x.tot,0);
+    const kel = {DERMAGA:0, LAPANGAN:0, BANTU:0}; Object.values(A).forEach(x => { if (x.a.t===t && x.sp>0) kel[x.a.g] = (kel[x.a.g]||0) + x.sp; });
+    const un = r.filter(x => !x.k).reduce((a,x)=>a+x.tot,0);
+    const top = Object.values(A).filter(x => x.a.t===t && x.sp>0).sort((a,b) => b.sp - a.sp)[0];
+    const wo = {}; r.forEach(x => { const k = woKey(x); wo[k] = (wo[k]||0) + x.tot; }); const topWo = Object.entries(wo).sort((a,b) => b[1]-a[1])[0];
+    return {t, tot, kel, un, n:r.length, nWo:Object.keys(wo).length, nAl:Object.values(A).filter(x => x.a.t===t && x.sp>0).length, top, topWo}; });
+  const G = rows.reduce((a,r)=>a+r.tot,0); if (!G) return '';
+  const mx = Math.max(...rows.map(r => r.tot));
+  const fT = UI.spT;
+  let h = `<div class="card" style="margin-top:12px"><h3>Sparepart per terminal <small>${periodeTxt()} · klik terminal untuk menyaring detail</small></h3><div class="spt-wrap">`;
+  h += `<div class="spt-donut">${donutSvg(rows.filter(r=>r.tot).map(r => ({l:r.t, v:r.tot, c:THEX[r.t]||'#64748b'})), 200, 28, ['TOTAL', rp(G), rows.filter(r=>r.tot).length+' terminal'])}
+    <div class="spt-dl">${rows.filter(r=>r.tot).sort((a,b)=>b.tot-a.tot).map(r => `<div><i style="background:${THEX[r.t]}"></i><b>${r.t}</b><span>${pct(r.tot/G)}</span></div>`).join('')}</div></div><div class="spt-list">`;
+  h += rows.slice().sort((a,b) => b.tot - a.tot).map(r => `<div class="spt-row ${fT===r.t?'on':''} ${r.tot?'':'dim'}" data-spt="${r.t}">
+      <div class="spt-n"><span class="kdot" style="background:${THEX[r.t]};height:28px"></span><div><b>${r.t}</b><div class="muted" style="font-size:11px">${esc(TN[r.t])}</div></div></div>
+      <div class="spt-b"><div class="spt-bar" style="width:${r.tot/mx*100}%">${['DERMAGA','LAPANGAN','BANTU'].map(g => r.kel[g] ? `<span style="flex:${r.kel[g]};background:${KCOL[g]}" title="${KELN[g]}: ${rp(r.kel[g])}"></span>` : '').join('')}${r.un?`<span style="flex:${r.un};background:#cbd5e1" title="Belum dipetakan: ${rp(r.un)}"></span>`:''}</div>
+        <div class="spt-meta">${r.tot ? `${num(r.nAl)} alat · ${num(r.nWo)} WO · ${num(r.n)} baris${r.top?` · tertinggi <b>${r.top.a.k.replace(r.t+'-','')}</b> ${rp(r.top.sp)}`:''}${r.topWo?` · WO terbesar ${esc(r.topWo[0])} ${rp(r.topWo[1])}`:''}` : 'belum ada data'}</div></div>
+      <div class="spt-v"><b>${r.tot?rp(r.tot):'–'}</b><span>${r.tot?pct(r.tot/G):''}</span></div></div>`).join('');
+  h += `</div></div><div class="legend" style="margin-top:8px">${['DERMAGA','LAPANGAN','BANTU'].map(g => `<span><i style="background:${KCOL[g]}"></i>${esc(KELN[g])}</span>`).join('')}<span><i style="background:#cbd5e1"></i>Belum dipetakan ke alat</span></div>`;
+  // tabel ringkas per terminal × kelompok (untuk unduh)
+  h += table('sp_term', [{k:'t',h:'Terminal'},{k:'d',h:KELN.DERMAGA,n:1,f:v=>v?rp(v):'–'},{k:'l',h:KELN.LAPANGAN,n:1,f:v=>v?rp(v):'–'},{k:'b',h:KELN.BANTU,n:1,f:v=>v?rp(v):'–'},{k:'un',h:'Belum dipetakan',n:1,f:v=>v?rp(v):'–'},{k:'tot',h:'Total',n:1,f:v=>'<b>'+(v?rp(v):'–')+'</b>'},{k:'p',h:'Porsi',n:1,f:v=>v?pct(v):'–'},{k:'nWo',h:'WO',n:1,f:num},{k:'n',h:'Baris',n:1,f:num}],
+    rows.map(r => ({t:r.t, d:r.kel.DERMAGA, l:r.kel.LAPANGAN, b:r.kel.BANTU, un:r.un, tot:r.tot, p:G?r.tot/G:0, nWo:r.nWo, n:r.n})), {sort:'tot', search:false, total:rs => { const S = f => rs.reduce((a,r)=>a+(r[f]||0),0); return {d:S('d'), l:S('l'), b:S('b'), un:S('un'), tot:S('tot'), p:1, nWo:S('nWo'), n:S('n')}; }});
+  return h + `</div>`;
+}
+
 /* ---------- Sparepart ---------- */
 P.sparepart = () => {
   let h = tabs([['detail','Detail'],['evaluasi','Evaluasi'],['dashboard','Dashboard'],['upload','Upload']]);
@@ -1151,9 +1189,12 @@ P.sparepart = () => {
   if (tab==='detail') {
     const un = raw.filter(r=>!r.k);
     h += `<div class="grid k4">${kpi('Total sparepart', rp(tot.sp), num(raw.length)+' baris · '+num(new Set(raw.map(r=>r.wo)).size)+' WO', true)}${kpi('Terpetakan ke alat', rp(tot.sp-tot.spUn), pct(tot.sp?(tot.sp-tot.spUn)/tot.sp:null))}${kpi('Tanpa alat (antrian)', rp(tot.spUn), num(un.length)+' baris')}</div>`;
-    const rows = Object.values(A).filter(x => x.sp>0).map(x => ({k:x.a.k, t:x.a.t, g:KELN[x.a.g], j:JEN[x.a.j], n:x.spn, sp:x.sp}));
-    h += `<div class="card" style="margin-top:12px"><h3>Sparepart per alat</h3>`+table('sp_alat',[{k:'k',h:'Kode alat'},{k:'t',h:'Terminal'},{k:'g',h:'Kelompok'},{k:'j',h:'Jenis'},{k:'n',h:'Baris',n:1,f:num},{k:'sp',h:'Biaya',n:1,f:rp,x:r=>r.sp}],rows,{sort:'sp',total:rs=>({n:rs.reduce((s,r)=>s+r.n,0),sp:rs.reduce((s,r)=>s+r.sp,0)})})+`</div>`;
-    h += `<div class="card" style="margin-top:12px"><h3>Detail per WO & material</h3>`+table('sp_raw',[{k:'tgl',h:'Tanggal'},{k:'t',h:'Terminal'},{k:'k',h:'Kode baku',f:v=>alatLbl(v)},{k:'nama',h:'Nama di SIGAP'},{k:'wo',h:'No WO'},{k:'mat',h:'Material / service'},{k:'qty',h:'Jml',n:1,f:v=>dec(v,0)},{k:'sat',h:'Sat'},{k:'tot',h:'Total',n:1,f:num},{k:'desk',h:'Deskripsi'}],raw,{sort:'tot',h:420})+`</div>`;
+    h += spTerminalCard(terms, raw, A);
+    const fT = UI.spT && terms.includes(UI.spT) ? UI.spT : null;
+    const rows = Object.values(A).filter(x => x.sp>0 && (!fT || x.a.t===fT)).map(x => ({k:x.a.k, t:x.a.t, g:KELN[x.a.g], j:JEN[x.a.j], n:x.spn, sp:x.sp}));
+    const chips = terms.length > 1 ? `<div class="seg sm2" style="margin:0 0 8px">${[['','Semua terminal'], ...terms.map(t => [t,t])].map(([k,n]) => `<button class="${(fT||'')===k?'on':''}" data-spt="${k}">${n}</button>`).join('')}</div>` : '';
+    h += `<div class="card" style="margin-top:12px"><h3>Sparepart per alat ${fT?'<small>'+fT+' · '+esc(TN[fT])+'</small>':''}</h3>`+chips+table('sp_alat',[{k:'k',h:'Kode alat'},{k:'t',h:'Terminal'},{k:'g',h:'Kelompok'},{k:'j',h:'Jenis'},{k:'n',h:'Baris',n:1,f:num},{k:'sp',h:'Biaya',n:1,f:rp,x:r=>r.sp}],rows,{sort:'sp',total:rs=>({n:rs.reduce((s,r)=>s+r.n,0),sp:rs.reduce((s,r)=>s+r.sp,0)})})+`</div>`;
+    h += `<div class="card" style="margin-top:12px"><h3>Detail per WO & material</h3>`+table('sp_raw',[{k:'tgl',h:'Tanggal'},{k:'t',h:'Terminal'},{k:'k',h:'Kode baku',f:v=>alatLbl(v)},{k:'nama',h:'Nama di SIGAP'},{k:'wo',h:'No WO'},{k:'mat',h:'Material / service'},{k:'qty',h:'Jml',n:1,f:v=>dec(v,0)},{k:'sat',h:'Sat'},{k:'tot',h:'Total',n:1,f:num},{k:'desk',h:'Deskripsi'}],fT ? raw.filter(r => r.t===fT) : raw,{sort:'tot',h:420})+`</div>`;
   } else if (tab==='evaluasi') {
     const rows = Object.values(A).filter(x => x.sp>0).map(x => ({k:x.a.k, g:KELN[x.a.g], sp:x.sp, jam:x.jam, rpj:x.jam?x.sp/x.jam:null}));
     h += `<div class="card"><h3>Biaya sparepart per jam operasi</h3>`+table('sp_eval',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'sp',h:'Sparepart',n:1,f:rp,x:r=>r.sp},{k:'jam',h:'Jam operasi',n:1,f:num},{k:'rpj',h:'Rp per jam',n:1,f:rp,x:r=>r.rpj}],rows,{sort:'sp'})+`</div>`;
@@ -1164,14 +1205,15 @@ P.sparepart = () => {
     const mats = {}; raw.forEach(r => { const m = (r.mat||'(kosong)').split(';').slice(0,2).join(' '); mats[m] = (mats[m]||0) + r.tot; });
     h += `<div class="card" style="margin-top:12px"><h3>10 material / jasa termahal ${periodeTxt()}</h3>`+hbars(Object.entries(mats).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,v]) => ({label:l.slice(0,34), v, c:'var(--c4)'})), {fmt:rp, lw:230})+`</div>`;
   } else {
-    const ts = terms; const series = ts.map((t,i) => ({name:t, c:TCOL[TERMS.findIndex(x=>x.k===t)], vals:[1,2,3,4,5,6,7,8,9].map(m => DATA.sp.filter(r => r.t===t && r.bln===m).reduce((s,r)=>s+r.tot,0))}));
-    h += `<div class="card"><h3>Tren biaya sparepart per bulan ${YEAR}</h3>`+vbars(BLN.slice(0,9), series, {fmt:v=>dec(v/1e9,1)+' M'})+`</div>`;
+    const ts = terms; const series = ts.map((t,i) => ({name:t, c:TCOL[TERMS.findIndex(x=>x.k===t)], vals:MONTHS.filter(m => m <= UI.bln).map(m => DATA.sp.filter(r => r.t===t && r.bln===m).reduce((s,r)=>s+r.tot,0))}));
+    h += `<div class="card"><h3>Tren biaya sparepart per bulan ${YEAR}</h3>`+vbars(MONTHS.filter(m => m <= UI.bln).map(m => BLN[m-1]), series, {fmt:v=>dec(v/1e9,1)+' M'})+`</div>`;
     const byJ = {}; Object.values(A).forEach(x => { if (x.sp>0) { const j = JEN[x.a.j]; byJ[j] = (byJ[j]||0)+x.sp; } });
     h += `<div class="card" style="margin-top:12px"><h3>Sparepart per jenis alat ${periodeTxt()}</h3>`+hbars(Object.entries(byJ).sort((a,b)=>b[1]-a[1]).map(([l,v]) => ({label:l, v, c:'var(--c3)'})), {fmt:rp, lw:200})+`</div>`;
   }
   return h;
 };
-P.sparepart.after = () => { ['sp_alat','sp_raw','sp_eval','sp_rep'].forEach(drawTable); wireUpload('sparepart'); };
+P.sparepart.after = () => { ['sp_term','sp_alat','sp_raw','sp_eval','sp_rep'].forEach(drawTable); wireUpload('sparepart');
+  document.querySelectorAll('[data-spt]').forEach(b => b.onclick = e => { e.preventDefault(); UI.spT = b.dataset.spt || null; render(); }); };
 
 /* ---------- BBM ---------- */
 P.bbm = () => {
