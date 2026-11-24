@@ -1137,9 +1137,9 @@ function uploadPanel(page){
     ${lk?`<div class="warnbox">🔒 Periode ${periodeTxt()} untuk ${t} sudah dikunci. Hanya Admin Pusat yang dapat membuka kembali (Master Data → Kunci Periode).</div>`:''}
     <div class="drop" id="drop">Seret file Excel ke sini atau <label style="color:var(--c2);cursor:pointer;text-decoration:underline">pilih file<input type="file" id="upF" accept=".xlsx" style="display:none"></label></div>
     <div id="upRes"></div></div>`;
-  h += `<div class="card" style="margin-top:12px"><h3>Riwayat upload ${s.name}</h3>`+table('upl_'+s.kind,[{k:'w',h:'Waktu'},{k:'t',h:'Terminal'},{k:'per',h:'Periode'},{k:'file',h:'File'},{k:'ok',h:'Diterima',n:1,f:num},{k:'q',h:'Tertahan',n:1,f:num},{k:'rej',h:'Ditolak',n:1,f:num},{k:'u',h:'Oleh'}],
+  h += `<div class="card" style="margin-top:12px"><h3>Riwayat upload ${s.name}</h3>`+table('upl_'+s.kind,[{k:'w',h:'Waktu'},{k:'t',h:'Terminal'},{k:'per',h:'Periode'},{k:'file',h:'File'},{k:'ok',h:'Diterima',n:1,f:num},{k:'q',h:'Tertahan',n:1,f:num},{k:'rej',h:'Ditolak',n:1,f:num},{k:'u',h:'Oleh'},{k:'act',h:'Aksi',f:(v,r)=>!r.id?'':!r.live?'<span class="muted" style="font-size:11.5px">sudah diganti upload baru</span>':r.lk?'<span class="muted" style="font-size:11.5px">🔒 terkunci</span>':(isPusat()||(UI.role==='terminal'&&UI.rterm===r.t))?`<button class="sm ghost" data-annul="${r.id}" style="color:#b91c1c;white-space:nowrap">Hapus upload</button>`:'',x:r=>r.live?'aktif':'diganti'}],
     (SR[s.kind].length ? [{w:'Data awal',t:s.kind==='sp'?'Semua':'JKT1',per:s.kind==='sp'?'Jan–Sep 2026':'Sep 2026',file:s.kind==='sp'?'OUTPUT_SIGAP_januari_s.d_september_2026.xlsx':s.kind==='pr'?'OUTPUT_TONUS_PALAPA_SEPTEMBER_2026.xlsx':'output_pfuel_september.xlsx',ok:SR[s.kind].filter(r=>!!resolve(r.src,r.t,r.nama)).length,q:SR[s.kind].filter(r=>!resolve(r.src,r.t,r.nama)).length,rej:0,u:'Impor awal'}] : [])
-      .concat(ST.uploads.filter(u => u.kind===s.kind).map(u => ({w:u.w,t:u.t,per:u.months.map(m=>BLN[m-1]).join(', ')+' '+YEAR,file:u.file,ok:u.ok,q:u.q,rej:u.rej,u:u.u+(UPROWS[u.kind].some(r=>r.b===u.id)?'':' (baris tidak tersimpan di browser)')}))).reverse(),{search:false})+`</div>`;
+      .concat(ST.uploads.filter(u => u.kind===s.kind).map(u => ({id:u.id, live:UPROWS[u.kind].some(r=>r.b===u.id), lk:u.months.some(m => locked(u.t,m)), w:u.w,t:u.t,per:u.months.map(m=>BLN[m-1]).join(', ')+' '+YEAR,file:u.file,ok:u.ok,q:u.q,rej:u.rej,u:u.u}))).reverse(),{search:false})+`</div>`;
   return h;
 }
 function wireUpload(page){
@@ -1243,6 +1243,19 @@ function parseUpload(page, aoa, fname){
   document.getElementById('upSave').onclick = commitUpload; document.getElementById('upCancel').onclick = () => { PENDING=null; document.getElementById('upRes').innerHTML=''; };
 }
 function showParseErr(msg){ document.getElementById('upRes').innerHTML = `<div class="warnbox">${esc(msg)}</div>`; }
+/* anulir (hapus) satu upload: semua baris dari batch itu dihapus, data bulan tsb menjadi kosong sampai di-upload ulang */
+async function annulUpload(id){
+  const u = ST.uploads.find(x => x.id===id); if (!u) return;
+  const n = UPROWS[u.kind].filter(r => r.b===id).length, src = {sp:'SIGAP', pr:'Tonus', bb:'P-Fuel'}[u.kind];
+  if (!confirm(`Hapus upload ${src} "${u.file}"?\n${u.t} · ${u.months.map(m=>BLN[m-1]).join(', ')} ${YEAR} · ${num(n)} baris\n\nData ${src} ${u.t} bulan tersebut akan kosong sampai Anda upload ulang file yang benar.`)) return;
+  try {
+    if (CLOUD_ON) { const tbl = {sp:'sparepart', pr:'produksi', bb:'bbm'}[u.kind]; await cloud.del(tbl, `batch_id=eq.${cloud.q(id)}`); await cloud.del('upload_batch', `id=eq.${cloud.q(id)}`); }
+  } catch(e) { toast('Gagal menghapus di server: '+e.message); return; }
+  UPROWS[u.kind] = UPROWS[u.kind].filter(r => r.b!==id); ST.uploads = ST.uploads.filter(x => x.id!==id);
+  saveRows(); logc('Hapus upload', `${src} · ${u.t} · ${u.months.map(m=>BLN[m-1]).join(', ')} · ${u.file} · ${n} baris`); save(); rebuildData(); toast(`Upload "${u.file}" dihapus.`); render();
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-annul]'); if (b) { e.preventDefault(); annulUpload(b.dataset.annul); } });
+
 async function commitUpload(){
   const p = PENDING; if (!p) return;
   p.rows.forEach(r => r.b = p.id+'_'+r.t);
