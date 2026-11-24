@@ -1304,9 +1304,11 @@ P.produksi = () => {
   if (!rows.length) return h + `<div class="note">Belum ada data produksi untuk ${scopeTxt()} periode ${periodeTxt()}. Silakan upload di tab Upload.</div>`;
   if (tab==='detail') {
     h += `<div class="grid k4">${kpi('Box dermaga (Loading + Discharging)', num(tot.dBox), num(tot.dTeu)+' TEUs', true)}${kpi('Box lapangan (Gate In + Gate Out)', num(tot.gBox)+' box')}${kpi('Pendapatan dermaga', rp(tot.revD))}${kpi('Pendapatan lapangan', rp(tot.revL))}</div>`;
-    h += rincianPendapatan(A, terms);
-    h += `<div class="card" style="margin-top:12px"><h3>Produksi per alat <small>${periodeTxt()}</small></h3>`+table('pr_alat',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'mv',h:'Total gerakan',n:1,f:num},{k:'dBox',h:'Box dermaga',n:1,f:num},{k:'dTeu',h:'TEUs dermaga',n:1,f:num},{k:'gBox',h:'Lapangan dibayar',n:1,f:num},{k:'unpaid',h:'% tidak dibayar',n:1,f:pct},{k:'rev',h:'Pendapatan',n:1,f:rp}],rows,{sort:'mv',total:rs=>({mv:rs.reduce((s,r)=>s+r.mv,0),dBox:rs.reduce((s,r)=>s+r.dBox,0),dTeu:rs.reduce((s,r)=>s+r.dTeu,0),gBox:rs.reduce((s,r)=>s+r.gBox,0),rev:rs.reduce((s,r)=>s+r.rev,0)})})+`</div>`;
-    const raw = DATA.pr.filter(r => terms.includes(r.t) && r.bln===UI.bln);
+    h += prTerminalCard(terms, A);
+    const fT = UI.prT && terms.includes(UI.prT) ? UI.prT : null;
+    h += rincianPendapatan(fT ? Object.fromEntries(Object.entries(A).filter(([k,x]) => x.a.t===fT)) : A, fT ? [fT] : terms);
+    h += `<div class="card" style="margin-top:12px"><h3>Produksi per alat <small>${periodeTxt()}${fT?' · '+fT:''}</small></h3>`+chipsTerm(terms, fT, 'data-prt')+table('pr_alat',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'mv',h:'Total gerakan',n:1,f:num},{k:'dBox',h:'Box dermaga',n:1,f:num},{k:'dTeu',h:'TEUs dermaga',n:1,f:num},{k:'gBox',h:'Lapangan dibayar',n:1,f:num},{k:'unpaid',h:'% tidak dibayar',n:1,f:pct},{k:'rev',h:'Pendapatan',n:1,f:rp}],fT ? rows.filter(r => r.t===fT) : rows,{sort:'mv',total:rs=>({mv:rs.reduce((s,r)=>s+r.mv,0),dBox:rs.reduce((s,r)=>s+r.dBox,0),dTeu:rs.reduce((s,r)=>s+r.dTeu,0),gBox:rs.reduce((s,r)=>s+r.gBox,0),rev:rs.reduce((s,r)=>s+r.rev,0)})})+`</div>`;
+    const raw = DATA.pr.filter(r => (fT ? r.t===fT : terms.includes(r.t)) && r.bln===UI.bln);
     h += `<div class="card" style="margin-top:12px"><h3>Data mentah Tonus</h3>`+table('pr_raw',[{k:'nama',h:'EQ No. (asli)'},{k:'k',h:'Kode baku',f:v=>alatLbl(v)},{k:'type',h:'Type'},{k:'task',h:'Task'},{k:'fm',h:'F/M'},{k:'s20',h:"20'",n:1,f:num},{k:'s40',h:"40'",n:1,f:num},{k:'s40h',h:"40'H",n:1,f:num},{k:'s45',h:"45'",n:1,f:num},{k:'box',h:'Total',n:1,f:num},{k:'op',h:'Operator'}],raw,{h:380})+`</div>`;
   } else if (tab==='evaluasi') {
     h += `<div class="note">Box per jam = box ÷ jam operasi EHM. Untuk alat dermaga dipakai box Loading + Discharging; alat lain memakai total gerakan. % tidak dibayar = gerakan RTG/RMG selain Gate In/Gate Out (housekeeping, shifting, bongkar muat kapal).</div>`;
@@ -1319,7 +1321,45 @@ P.produksi = () => {
   }
   return h;
 };
-P.produksi.after = () => { ['pr_alat','pr_raw','pr_eval','pr_rinD','pr_rinL','pr_rinB'].forEach(drawTable); wireUpload('produksi'); };
+P.produksi.after = () => { ['pr_alat','pr_raw','pr_eval','pr_rinD','pr_rinL','pr_rinB'].forEach(drawTable); wireUpload('produksi');
+  document.querySelectorAll('[data-prt]').forEach(b => b.onclick = e => { e.preventDefault(); UI.prT = b.dataset.prt || null; render(); }); };
+
+/* ---------- kartu perbandingan per terminal (dipakai Produksi & BBM) ---------- */
+function termCard(o){
+  // o: {title, sub, attr, sel, rows:[{t, v, segs:[{k,v}], meta, right2}], segDef:[[k,label,color]], fmt, center}
+  const rows = o.rows, G = rows.reduce((a,r)=>a+(r.v||0),0); if (!G) return '';
+  const mx = Math.max(...rows.map(r => r.v||0)), col = k => (o.segDef.find(d => d[0]===k)||[])[2] || '#cbd5e1';
+  let h = `<div class="card" style="margin-top:12px"><h3>${o.title} <small>${o.sub} · klik terminal untuk menyaring detail</small></h3><div class="spt-wrap">`;
+  h += `<div class="spt-donut">${donutSvg(rows.filter(r=>r.v).map(r => ({l:r.t, v:r.v, c:THEX[r.t]||'#64748b'})), 200, 28, [o.center, o.fmt(G), rows.filter(r=>r.v).length+' terminal'])}
+    <div class="spt-dl">${rows.filter(r=>r.v).sort((a,b)=>b.v-a.v).map(r => `<div><i style="background:${THEX[r.t]}"></i><b>${r.t}</b><span>${pct(r.v/G)}</span></div>`).join('')}</div></div><div class="spt-list">`;
+  h += rows.slice().sort((a,b) => (b.v||0) - (a.v||0)).map(r => `<div class="spt-row ${o.sel===r.t?'on':''} ${r.v?'':'dim'}" ${o.attr}="${r.t}">
+      <div class="spt-n"><span class="kdot" style="background:${THEX[r.t]};height:28px"></span><div><b>${r.t}</b><div class="muted" style="font-size:11px">${esc(TN[r.t])}</div></div></div>
+      <div class="spt-b"><div class="spt-bar" style="width:${mx ? (r.v||0)/mx*100 : 0}%">${r.segs.filter(x => x.v>0).map(x => `<span style="flex:${x.v};background:${col(x.k)}" title="${esc((o.segDef.find(d=>d[0]===x.k)||[])[1]||x.k)}: ${o.fmt(x.v)}"></span>`).join('')}</div>
+        <div class="spt-meta">${r.v ? r.meta : 'belum ada data'}</div></div>
+      <div class="spt-v"><b>${r.v ? o.fmt(r.v) : '–'}</b><span>${r.v ? (r.right2 || pct(r.v/G)) : ''}</span></div></div>`).join('');
+  return h + `</div></div><div class="legend" style="margin-top:8px">${o.segDef.map(d => `<span><i style="background:${d[2]}"></i>${esc(d[1])}</span>`).join('')}</div>${o.foot||''}</div>`;
+}
+const chipsTerm = (terms, sel, attr) => terms.length > 1 ? `<div class="seg sm2" style="margin:0 0 8px">${[['','Semua terminal'], ...terms.map(t => [t,t])].map(([k,n]) => `<button class="${(sel||'')===k?'on':''}" ${attr}="${k}">${n}</button>`).join('')}</div>` : '';
+function prTerminalCard(terms, A){
+  const rows = terms.map(t => { const L = Object.values(A).filter(x => x.a.t===t);
+    const b = k => L.filter(x => x.a.g==='DERMAGA').reduce((a,x) => a + (x.bk[k] ? x.bk[k].b : 0), 0);
+    const dBox = L.reduce((a,x)=>a+x.dBox,0), dTeu = L.reduce((a,x)=>a+x.dTeu,0), gBox = L.reduce((a,x)=>a+x.gBox,0), rev = L.reduce((a,x)=>a+x.rev,0), nAl = L.filter(x => x.mv>0).length;
+    const top = L.filter(x => x.a.g==='DERMAGA' && x.dBox>0).sort((a,b) => b.dBox - a.dBox)[0];
+    return {t, v:dBox, segs:['20F','40F','20M','40M'].map(k => ({k, v:b(k)})), right2: num(dTeu)+' TEUs',
+      meta:`${num(dTeu)} TEUs · box lapangan (gate) ${num(gBox)} · ${nAl} alat bergerak · pendapatan ${rp(rev)}${top?` · QCC tersibuk <b>${top.a.k.replace(t+'-','')}</b> ${num(top.dBox)} box`:''}`}; });
+  return termCard({title:'Produksi dermaga per terminal', sub:periodeTxt()+' · Loading + Discharging', attr:'data-prt', sel:UI.prT, rows, fmt:v => num(v)+' box', center:'BOX DERMAGA',
+    segDef:[['20F',"20' Full",'#2563eb'],['40F',"40' Full",'#60a5fa'],['20M',"20' Empty",'#0d9488'],['40M',"40' Empty",'#5eead4']]});
+}
+function bbTerminalCard(terms, A){
+  const rows = terms.map(t => { const L = Object.values(A).filter(x => x.a.t===t && x.a.j!=='GNS'), Gn = Object.values(A).filter(x => x.a.t===t && x.a.j==='GNS');
+    const k = g => L.filter(x => x.a.g===g).reduce((a,x)=>a+(x.bbL||0),0); const lit = L.reduce((a,x)=>a+(x.bbL||0),0), rp_ = L.reduce((a,x)=>a+(x.bbRp||0),0);
+    const dBox = L.reduce((a,x)=>a+x.dBox,0), dTeu = L.reduce((a,x)=>a+x.dTeu,0), gen = Gn.reduce((a,x)=>a+(x.bbL||0),0), nAl = L.filter(x => x.bbL>0).length;
+    const top = L.filter(x => x.bbL>0).sort((a,b) => b.bbL - a.bbL)[0];
+    return {t, v:lit, segs:['DERMAGA','LAPANGAN','BANTU'].map(g => ({k:g, v:k(g)})), right2: rp(rp_),
+      meta:`${nAl} alat · ${dBox ? dec(lit/dBox,2)+' L/box · '+dec(lit/dTeu,2)+' L/TEUs' : 'belum ada produksi'}${gen?` · genset ${num(gen)} L (terpisah)`:''}${top?` · terbanyak <b>${top.a.k.replace(t+'-','')}</b> ${num(top.bbL)} L`:''}`}; });
+  return termCard({title:'BBM per terminal', sub:periodeTxt()+' · terverifikasi, tanpa genset', attr:'data-bbt', sel:UI.bbT, rows, fmt:v => num(v)+' L', center:'TOTAL LITER',
+    segDef:[['DERMAGA',KELN.DERMAGA,KCOL.DERMAGA],['LAPANGAN',KELN.LAPANGAN,KCOL.LAPANGAN],['BANTU',KELN.BANTU,KCOL.BANTU]]});
+}
 
 /* ---------- Sparepart: ringkasan per terminal ---------- */
 const THEX = {JKT1:'#3b82f6', PJG:'#14b8a6', TBR:'#f59e0b', PLB:'#8b5cf6', PNK:'#ef4444', JMB:'#22c55e', KJG:'#ec4899'};
@@ -1394,9 +1434,11 @@ P.bbm = () => {
     const rej = raw.filter(r => r.status!=='Realisasi Terverifikasi'); const ver = raw.filter(r => r.status==='Realisasi Terverifikasi');
     const totB = ver.reduce((s,r)=>s+r.vol*r.harga,0);
     h += `<div class="grid k4">${kpi('Total biaya BBM', rp(totB), num(ver.length)+' pengisian · '+num(new Set(ver.map(r=>r.ba)).size)+' BA', true)}${kpi('BBM alat (terverifikasi)', num(tot.bbL)+' L', rp(tot.bbRp)+' · tanpa genset')}${kpi('Genset (dipisahkan)', num(tot.genL)+' L', rp(tot.genRp))}${kpi('Liter per TEUs', tot.lTeu?dec(tot.lTeu,2):'–', tot.lBox?dec(tot.lBox,2)+' L per box':'')}${kpi('Baris ditolak OPSKOM', num(rej.length), 'tidak dihitung, disimpan untuk audit')}</div>`;
-    const rows = Object.values(A).filter(x => x.bbL>0).map(x => ({k:x.a.k, g:x.a.j==='GNS'?'Genset (terpisah)':KELN[x.a.g], L:x.bbL, rp:x.bbRp}));
-    h += `<div class="card" style="margin-top:12px"><h3>BBM per alat</h3>`+table('bb_alat',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'L',h:'Liter',n:1,f:num},{k:'rp',h:'Biaya',n:1,f:rp,x:r=>r.rp}],rows,{sort:'L',total:rs=>({L:rs.reduce((s,r)=>s+r.L,0),rp:rs.reduce((s,r)=>s+r.rp,0)})})+`</div>`;
-    h += `<div class="card" style="margin-top:12px"><h3>Detail per Berita Acara</h3>`+table('bb_raw',[{k:'tgl',h:'Tgl realisasi'},{k:'ba',h:'Nomor BA'},{k:'nama',h:'Alat (P-Fuel)'},{k:'k',h:'Kode baku',f:v=>alatLbl(v)},{k:'vol',h:'Liter',n:1,f:num},{k:'harga',h:'Tarif/L',n:1,f:num},{k:'rp',h:'Biaya',n:1,f:(v,r)=>num(r.vol*r.harga),x:r=>r.vol*r.harga},{k:'status',h:'Status',f:v=>v==='Realisasi Terverifikasi'?pill('Terverifikasi','p-ok'):pill(v.replace('Realisasi BBM ditolak OPSKOM/UTILITY dengan alasan ','Ditolak: '),'p-bad')}],raw,{h:420})+`</div>`;
+    h += bbTerminalCard(terms, A);
+    const fT = UI.bbT && terms.includes(UI.bbT) ? UI.bbT : null;
+    const rows = Object.values(A).filter(x => x.bbL>0 && (!fT || x.a.t===fT)).map(x => ({k:x.a.k, g:x.a.j==='GNS'?'Genset (terpisah)':KELN[x.a.g], L:x.bbL, rp:x.bbRp}));
+    h += `<div class="card" style="margin-top:12px"><h3>BBM per alat ${fT?'<small>'+fT+'</small>':''}</h3>`+chipsTerm(terms, fT, 'data-bbt')+table('bb_alat',[{k:'k',h:'Kode alat'},{k:'g',h:'Kelompok'},{k:'L',h:'Liter',n:1,f:num},{k:'rp',h:'Biaya',n:1,f:rp,x:r=>r.rp}],rows,{sort:'L',total:rs=>({L:rs.reduce((s,r)=>s+r.L,0),rp:rs.reduce((s,r)=>s+r.rp,0)})})+`</div>`;
+    h += `<div class="card" style="margin-top:12px"><h3>Detail per Berita Acara</h3>`+table('bb_raw',[{k:'tgl',h:'Tgl realisasi'},{k:'ba',h:'Nomor BA'},{k:'nama',h:'Alat (P-Fuel)'},{k:'k',h:'Kode baku',f:v=>alatLbl(v)},{k:'vol',h:'Liter',n:1,f:num},{k:'harga',h:'Tarif/L',n:1,f:num},{k:'rp',h:'Biaya',n:1,f:(v,r)=>num(r.vol*r.harga),x:r=>r.vol*r.harga},{k:'status',h:'Status',f:v=>v==='Realisasi Terverifikasi'?pill('Terverifikasi','p-ok'):pill(v.replace('Realisasi BBM ditolak OPSKOM/UTILITY dengan alasan ','Ditolak: '),'p-bad')}],(UI.bbT && terms.includes(UI.bbT)) ? raw.filter(r => r.t===UI.bbT) : raw,{h:420})+`</div>`;
   } else if (tab==='evaluasi') {
     const rows = Object.values(A).filter(x => x.bbL>0 && x.a.j!=='GNS').map(x => ({k:x.a.k, g:KELN[x.a.g], j:JEN[x.a.j], L:x.bbL, jam:x.jam, lpj:x.jam?x.bbL/x.jam:null, lpb: x.a.g==='DERMAGA'&&x.dBox? x.bbL/x.dBox : x.mv? x.bbL/x.mv : null}));
     const med = {}; Object.entries(rows.reduce((o,r)=>{ if (r.lpj) (o[r.j]=o[r.j]||[]).push(r.lpj); return o; },{})).forEach(([j,a]) => med[j] = median(a));
@@ -1411,7 +1453,8 @@ P.bbm = () => {
   }
   return h;
 };
-P.bbm.after = () => { ['bb_alat','bb_raw','bb_eval'].forEach(drawTable); wireUpload('bbm'); };
+P.bbm.after = () => { ['bb_alat','bb_raw','bb_eval'].forEach(drawTable); wireUpload('bbm');
+  document.querySelectorAll('[data-bbt]').forEach(b => b.onclick = e => { e.preventDefault(); UI.bbT = b.dataset.bbt || null; render(); }); };
 
 /* ---------- EHM ---------- */
 P.ehm = () => {
