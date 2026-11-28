@@ -227,6 +227,10 @@ details.sd{padding:12px 16px}details.sd>summary{list-style:none;cursor:pointer}d
 .sd-chips{display:flex;gap:6px;flex-wrap:wrap}.sd-c{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px}
 .sd-c.ok{background:#dcfce7;color:#166534}.sd-c.pt{background:#fef3c7;color:#92400e}.sd-c.no{background:#fee2e2;color:#991b1b}
 .sd-more{margin-left:auto;font-size:12px;color:#64748b}.sd-more u{color:#0f766e;text-decoration:none;font-weight:600}
+.hm-g3.hm-g4{grid-template-columns:repeat(4,minmax(0,1fr))}.hm-g4 .hm-v.sm{font-size:24px}.hm-g4 .spark{width:84px}
+@media(max-width:1250px){.hm-g3.hm-g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.hm-g3.hm-g4{grid-template-columns:1fr}}
+.hm-g3.hm-g4.hm-g5{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}.hm-g5 .hm-row{flex-wrap:wrap}.hm-g5 .spark{width:70px;height:28px}
 </style>
 </head>
 <body>
@@ -971,11 +975,13 @@ function dirHero(terms, ms, R){
     {l:'Total biaya alat', v:t => t.biaya, f:rp, good:-1, c:'#ef4444', sub:t => `Sparepart ${rp(t.sp)} · BBM ${rp(t.bbRp)} · Lumpsum ${rp(t.lump)}`},
     {l:'Margin kontribusi alat', v:t => t.rev - t.biaya, f:v => (v<0?'−':'')+rp(Math.abs(v)), good:1, c:'#0ea5a4', sub:t => t.rev ? `margin <b>${pct((t.rev-t.biaya)/t.rev)}</b> dari pendapatan · belum termasuk biaya SDM, overhead & penyusutan` : ''},
     {l:'Biaya alat per TEUs', v:t => t.perTeuProd, f:v => rpS(v), good:-1, c:'#6366f1', sub:t => splitLine(SK, 'B', 'teu', rpS) + (t.perBoxProd ? `per box ${rpS(t.perBoxProd)} · ` : '') + `${num(SK.teu)} TEUs throughput dermaga`},
+    {l:'Biaya alat per box', v:t => t.perBoxProd, f:v => rpS(v), good:-1, c:'#8b5cf6', sub:t => ''},
     {l:'BBM per TEUs', v:t => t.lTeu, f:v => dec(v,2)+' L', good:-1, c:'#ec4899', sub:t => splitLine(SK, 'L', 'teu', lS) + `${num(SK.lTot)} L untuk ${num(SK.teu)} TEUs`},
+    {l:'Pendapatan per TEUs', v:t => t.dTeu && t.rev ? t.rev/t.dTeu : null, f:v => rpS(v), good:1, c:'#10b981', sub:() => ''},
     {l:'BBM per box', v:t => t.lBox, f:v => dec(v,2)+' L', good:-1, c:'#f59e0b', sub:t => splitLine(SK, 'L', 'box', lS) + `${num(SK.box)} box dermaga (Loading + Discharging)`}];
   const src = mm => { const o = {}; ['pr','sp','bb'].forEach(kd => o[kd] = (DATA[kd]||[]).some(r => mm.includes(r.bln) && terms.includes(r.t))); return o; };
   const sc = src(ms), sp0 = pm ? src(pm) : null, SRCN = {pr:'Produksi', sp:'Sparepart', bb:'BBM'};
-  const need = {Pendapatan:['pr'], 'Total biaya alat':['sp','bb'], 'Margin kontribusi alat':['pr','sp','bb'], 'Biaya alat per TEUs':['pr','sp','bb'], 'BBM per TEUs':['pr','bb'], 'BBM per box':['pr','bb']};
+  const need = {Pendapatan:['pr'], 'Total biaya alat':['sp','bb'], 'Margin kontribusi alat':['pr','sp','bb'], 'Biaya alat per TEUs':['pr','sp','bb'], 'Biaya alat per box':['pr','sp','bb'], 'BBM per TEUs':['pr','bb'], 'BBM per box':['pr','bb'], 'Pendapatan per TEUs':['pr']};
   const pmTxt = pm ? (pm.length===1 ? BLN[pm[0]-1] : `${BLN[pm[0]-1]}–${BLN[pm.at(-1)-1]}`) : '';
   const cell = it => {
     const nd = need[it.l], miss = nd.filter(k => !sc[k]), missP = sp0 ? nd.filter(k => !sp0[k]) : [];
@@ -989,7 +995,7 @@ function dirHero(terms, ms, R){
     const sp = spark(ST_.map(t => !t || (it.l.startsWith('BBM per') && !t.bbL) ? null : it.v(t)), it.c);
     return {val: v===null||v===undefined||isNaN(v) ? '–' : it.f(v), dl, sp, neg: v < 0};
   };
-  const [cR, cB, cM, cT, cLT, cLB] = items.map(cell);
+  const [cR, cB, cM, cT, cTB, cLT, cRT, cLB] = items.map(cell);
   const bTot = tot.biaya||0, rv = tot.rev||0, bp = rv ? Math.min(bTot/rv, 1) : 1;
   const money = (l, c, cls) => `<div class="hm-m"><div class="hm-l">${l}</div><div class="hm-row"><div class="hm-v ${cls||''}">${c.val}</div>${c.sp}</div><div class="hm-d">${c.dl}</div></div>`;
   let h = `<section class="hm-card" aria-label="Ringkasan keuangan"><div class="hm-g3">${money('Pendapatan', cR)}${money('Biaya alat', cB)}${money('Margin kontribusi alat', cM, cM.neg ? 'neg' : 'pos')}</div>`;
@@ -1002,8 +1008,13 @@ function dirHero(terms, ms, R){
     return `<div class="hm-card hm-e"><div class="hm-l">${l}</div><div class="hm-row"><div class="hm-v sm">${c.val}</div>${c.sp}</div><div class="hm-d">${c.dl}</div>`+
       (ok ? `<div class="hm-bar sm">${G.map(g => SK[key][g] > 0 ? `<span style="flex:${SK[key][g]};background:${KCOLX(g)}" title="${KSHORT[g]}: ${fmt(SK[key][g]/SK[den])}"></span>` : '').join('')}</div>
         <div class="hm-parts">${G.filter(g => SK[key][g] > 0.5).map(g => `<span><i style="background:${KCOLX(g)}"></i>${KSHORT[g]} <b>${fmt(SK[key][g]/SK[den])}</b></span>`).join('')}</div>` : '') + `</div>`; };
-  h += `<div class="hm-g3 gap">${eff('Biaya alat per TEUs', cT, 'B', 'teu', v => 'Rp '+num(Math.round(v)))}${eff('BBM per TEUs', cLT, 'L', 'teu', v => dec(v,2)+' L')}${eff('BBM per box', cLB, 'L', 'box', v => dec(v,2)+' L')}</div>`;
-  h += `<div class="hm-note">Per TEUs/box = biaya atau liter semua alat (dermaga + lapangan + bantu) ÷ throughput dermaga ${num(SK.teu)} TEUs · ${num(SK.box)} box. Genset dipisahkan. Garis kecil = tren ${sm.length} bulan (${BLN[sm[0]-1]}–${BLN[end-1]}); ▲▼ hijau membaik, merah memburuk.</div>`;
+  const rT = tot.dTeu ? tot.rev/tot.dTeu : 0, bT = SK.teu ? SK.bTot/SK.teu : 0;
+  const revCard = `<div class="hm-card hm-e"><div class="hm-l">Pendapatan per TEUs</div><div class="hm-row"><div class="hm-v sm">${cRT.val}</div>${cRT.sp}</div><div class="hm-d">${cRT.dl}</div>`+
+    (rT ? `<div class="hm-bar sm">${tot.revD>0?`<span style="flex:${tot.revD};background:${KCOL.DERMAGA}"></span>`:''}${tot.revL>0?`<span style="flex:${tot.revL};background:${KCOL.LAPANGAN}"></span>`:''}</div>
+      <div class="hm-parts"><span><i style="background:${KCOL.DERMAGA}"></i>Stevedoring <b>Rp ${num(Math.round(tot.revD/tot.dTeu))}</b></span><span><i style="background:${KCOL.LAPANGAN}"></i>Lift on/off <b>Rp ${num(Math.round(tot.revL/tot.dTeu))}</b></span></div>
+      ${bT ? `<div class="hm-parts" style="margin-top:6px">Margin per TEUs <b class="${rT-bT<0?'neg':'pos'}">${rT-bT<0?'−':'+'}Rp ${num(Math.round(Math.abs(rT-bT)))}</b></div>` : ''}` : '') + `</div>`;
+  h += `<div class="hm-g3 hm-g4 hm-g5 gap">${revCard}${eff('Biaya alat per TEUs', cT, 'B', 'teu', v => 'Rp '+num(Math.round(v)))}${eff('Biaya alat per box', cTB, 'B', 'box', v => 'Rp '+num(Math.round(v)))}${eff('BBM per TEUs', cLT, 'L', 'teu', v => dec(v,2)+' L')}${eff('BBM per box', cLB, 'L', 'box', v => dec(v,2)+' L')}</div>`;
+  h += `<div class="hm-note">Pendapatan per TEUs = stevedoring + lift on/off ÷ throughput dermaga. Biaya & BBM per TEUs/box = biaya atau liter semua alat (dermaga + lapangan + bantu) ÷ throughput dermaga ${num(SK.teu)} TEUs · ${num(SK.box)} box. Genset dipisahkan. Garis kecil = tren ${sm.length} bulan (${BLN[sm[0]-1]}–${BLN[end-1]}); ▲▼ hijau membaik, merah memburuk.</div>`;
   return h;
 }
 /* ukuran produksi per alat sesuai kelompok */
