@@ -839,7 +839,7 @@ function gtable(id, groups, rows, opt={}){
   TBL[id] = {cols: cols.map(c => ({...c, h: (c.gh ? c.gh+' · ' : '')+c.h})), rows: rows.filter(r => !r._head), opt:{}, sort:null, dir:-1, q:''};
   const cell = (c, r) => { const v = r[c.k]; return `<td class="${c.n?'n':''} ${c.cls||''}">${c.f ? c.f(v, r) : (v===null||v===undefined ? '–' : esc(v))}</td>`; };
   let h = `<div class="tbar"><span class="cnt">${opt.cap||''}</span><button class="ghost sm" data-xl="${id}">⬇ Unduh Excel</button></div><div class="tw gt-w" style="${opt.h?'max-height:'+opt.h+'px':''}"><table class="gt" id="${id}"><thead><tr>`;
-  h += groups.map(g => `<th colspan="${g.cols.length}" class="gh ${g.g?'':'blank'}" style="--gc:${g.c||'#cbd5e1'}">${esc(g.g||'')}</th>`).join('') + '</tr><tr>';
+  h += groups.map((g,gi) => `<th colspan="${g.cols.length}" class="gh ${g.g?'':'blank'} ${gi===0?'stick':''}" style="--gc:${g.c||'#cbd5e1'}">${esc(g.g||'')}</th>`).join('') + '</tr><tr>';
   h += cols.map((c,i) => `<th class="${c.n?'n':''} ${i===0?'stick':''}" style="--gc:${c.gc||'transparent'}">${c.h}</th>`).join('') + '</tr></thead><tbody>';
   h += rows.map(r => r._head ? `<tr class="gt-head"><td colspan="${cols.length}"><span class="gt-hl"><span class="kdot" style="background:${r.c}"></span>${esc(r._head)}</span></td></tr>`
     : `<tr class="${r._sub?'gt-sub':''} ${r._tot?'tot':''} ${r._dim?'dim':''}">`+cols.map((c,i) => i===0 ? cell(c,r).replace('<td class="','<td class="stick ') : cell(c,r)).join('')+'</tr>').join('');
@@ -856,10 +856,10 @@ function kinerjaRow(list, extra={}){
   const box = s(aBox), teu = s(aTeu), L = s(x => x.bbL), bbRp = s(x => x.bbRp), jamL = list.filter(x => x.jam!==null && x.jam!==undefined), jam = jamL.length ? s(x => x.jam) : null;
   const jamBox = jamL.reduce((a,x) => a + aBox(x), 0), jamLt = jamL.reduce((a,x) => a + (x.bbL||0), 0);
   const rev = s(x => x.rev), sp = s(x => x.sp), lump = s(x => x.lump), biaya = bbRp + sp + lump, utama = list.some(x => x.a.g!=='BANTU');
-  const P_ = list.filter(x => aBox(x) > 0), Lp = P_.reduce((a,x) => a + (x.bbL||0), 0), Rp_ = P_.reduce((a,x) => a + (x.bbRp||0), 0);   // rasio per box/TEUs hanya dari alat yang berproduksi
+  const P_ = list.filter(x => aBox(x) > 0), Lp = P_.reduce((a,x) => a + (x.bbL||0), 0), Rp_ = P_.reduce((a,x) => a + (x.bbRp||0), 0), Bp = P_.reduce((a,x) => a + (x.bbRp||0) + (x.sp||0) + (x.lump||0), 0);   // rasio per box/TEUs hanya dari alat yang berproduksi
   return {b20F:b('20F'), b40F:b('40F'), b20M:b('20M'), b40M:b('40M'), box, teu, jam, L, harga: L ? bbRp/L : null,
     lJam: jam ? jamLt/jam : null, lBox: box && Lp ? Lp/box : null, lTeu: teu && Lp ? Lp/teu : null, boxJam: jam ? jamBox/jam : null,
-    r20F:r('20F'), r40F:r('40F'), r20M:r('20M'), r40M:r('40M'), rev, bbBox: box && Rp_ ? Rp_/box : null, bb:bbRp, sp, lump, biaya, margin: utama && rev ? rev - biaya : (utama ? -biaya : null), ...extra};
+    r20F:r('20F'), r40F:r('40F'), r20M:r('20M'), r40M:r('40M'), rev, bbBox: box && Rp_ ? Rp_/box : null, bb:bbRp, sp, lump, biaya, perTeu: teu && biaya ? biaya/teu : null, perBox: box && biaya ? biaya/box : null, margin: utama && rev ? rev - biaya : (utama ? -biaya : null), ...extra};
 }
 const KIN_GROUPS = (first) => [
   {g:'', cols:[first]},
@@ -867,7 +867,7 @@ const KIN_GROUPS = (first) => [
   {g:'EHM & BBM', c:'#ec4899', cols:[{k:'jam',h:'Jam operasi',n:1,f:fN},{k:'L',h:'BBM (liter)',n:1,f:fN},{k:'harga',h:'Harga/L',n:1,f:v => v ? 'Rp '+num(Math.round(v)) : '–'}]},
   {g:'Indikator kinerja', c:'#f59e0b', cols:[{k:'lJam',h:'Liter/jam',n:1,f:fD},{k:'lBox',h:'Liter/box',n:1,f:v=>'<b>'+fD(v)+'</b>'},{k:'lTeu',h:'Liter/TEUs',n:1,f:fD},{k:'boxJam',h:'Box/jam',n:1,f:fD}]},
   {g:'Pendapatan', c:'#10b981', cols:[{k:'r20F',h:"20' Full",n:1,f:fR},{k:'r40F',h:"40' Full",n:1,f:fR},{k:'r20M',h:"20' Empty",n:1,f:fR},{k:'r40M',h:"40' Empty",n:1,f:fR},{k:'rev',h:'Total pendapatan',n:1,f:v=>'<b>'+fR(v)+'</b>'}]},
-  {g:'Biaya BBM, sparepart & perawatan', c:'#ef4444', cols:[{k:'bbBox',h:'BBM/box',n:1,f:v => v ? 'Rp '+num(Math.round(v)) : '–'},{k:'bb',h:'Biaya BBM',n:1,f:fR},{k:'sp',h:'Sparepart',n:1,f:fR},{k:'lump',h:'Lumpsum',n:1,f:fR},{k:'biaya',h:'Total biaya',n:1,f:v=>'<b>'+fR(v)+'</b>'}]},
+  {g:'Biaya BBM, sparepart & perawatan', c:'#ef4444', cols:[{k:'bbBox',h:'BBM/box',n:1,f:v => v ? 'Rp '+num(Math.round(v)) : '–'},{k:'bb',h:'Biaya BBM',n:1,f:fR},{k:'sp',h:'Sparepart',n:1,f:fR},{k:'lump',h:'Lumpsum',n:1,f:fR},{k:'biaya',h:'Total biaya',n:1,f:v=>'<b>'+fR(v)+'</b>'},{k:'perTeu',h:'Biaya/TEUs',n:1,f:v => v ? 'Rp '+num(Math.round(v)) : '–'},{k:'perBox',h:'Biaya/box',n:1,f:v => v ? 'Rp '+num(Math.round(v)) : '–'}]},
   {g:'', cols:[{k:'margin',h:'Pendapatan − biaya',n:1,f:fM}]}];
 function laporanAlat(R, term){
   const all = Object.values(R.A).filter(x => x.a.t===term && x.a.j!=='GNS' && (x.biaya>0 || x.rev>0 || x.mv>0));
